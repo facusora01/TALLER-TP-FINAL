@@ -1,0 +1,70 @@
+@startuml modelo-de-dominio
+title Modelo de dominio - Sistema de reserva de asientos
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+hide methods
+
+class Usuario {
+  id
+  nombre
+}
+
+class Aerolinea {
+  id
+  nombre
+  codigo
+  color
+}
+
+class Vuelo {
+  id
+  origen
+  destino
+  fecha
+  hora
+  precio
+}
+
+class Asiento {
+  numero
+  estado : EstadoAsiento
+}
+
+class Reserva {
+  id
+  estado : EstadoReserva
+  creada_en
+  expira_en
+}
+
+enum EstadoAsiento {
+  disponible
+  reservado
+  confirmado
+}
+
+enum EstadoReserva {
+  pendiente
+  confirmada
+  cancelada
+  expirada
+}
+
+Aerolinea "1" *-- "*" Vuelo : opera
+Vuelo "1" *-- "20..100" Asiento : tiene
+Usuario "1" -- "*" Reserva : hace
+Reserva "*" --> "1" Asiento : ocupa
+
+Asiento ..> EstadoAsiento
+Reserva ..> EstadoReserva
+
+note right of Reserva
+  Transiciones de estado:
+  pendiente -> confirmada  (paga)
+  pendiente -> cancelada   (cancela usuario)
+  pendiente -> expirada    (pasa 1 min)
+  confirmada es estado final
+end note
+
+@enduml
