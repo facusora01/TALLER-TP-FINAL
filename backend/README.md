@@ -1,21 +1,8 @@
-# Vuelos
+# Vuelos — Backend
 
-**TODO: Add description**
+Backend en Elixir + OTP. Maneja usuarios y persistencia en DETS (el estado
+sobrevive a reiniciar el server). Necesitás Elixir ~> 1.17 y Erlang/OTP 27+.
 
-## Installation
+**Levantar:** parado en backend, `mix deps.get` y después `mix run --no-halt`.
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `vuelos` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:vuelos, "~> 0.1.0"}
-  ]
-end
-```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/vuelos>.
-
+Para correr los test, entren a backend y en consola `mix test`.

@@ -24,3 +24,6 @@ vuelos-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# Tablas DETS de persistencia generadas en runtime.
+/data/
