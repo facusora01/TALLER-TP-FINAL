@@ -18,7 +18,6 @@ defmodule TpFinal.FlightManager do
         precio: 50000,
         asientos: crear_asientos()
       },
-
       %Flight{
         id: 2,
         aerolinea: "Pampa Airlines",
@@ -33,27 +32,98 @@ defmodule TpFinal.FlightManager do
     {:ok, vuelos}
   end
 
+  # ==========================
+  # Funciones públicas
+  # ==========================
+
   def listar_vuelos do
     GenServer.call(__MODULE__, :listar_vuelos)
   end
 
-  def handle_call(:listar_vuelos, _from, state) do
-    {:reply, state, state}
+  def buscar_vuelo(id_vuelo) do
+    GenServer.call(__MODULE__, {:buscar_vuelo, id_vuelo})
   end
 
-def buscar_vuelo(id_vuelo) do
-  GenServer.call(__MODULE__, {:buscar_vuelo, id_vuelo})
-end
+  def buscar_por_destino(destino) do
+    GenServer.call(
+      __MODULE__,
+      {:buscar_por_destino, destino}
+    )
+  end
 
-def handle_call({:buscar_vuelo, id_vuelo}, _from, estado) do
-  vuelo =
-    Enum.find(estado, fn vuelo ->
-      vuelo.id == id_vuelo
-    end)
+  def buscar_por_fecha(fecha) do
+    GenServer.call(
+      __MODULE__,
+      {:buscar_por_fecha, fecha}
+    )
+  end
 
-  {:reply, vuelo, estado}
-end
+  def obtener_asientos(id_vuelo) do
+    GenServer.call(
+      __MODULE__,
+      {:obtener_asientos, id_vuelo}
+    )
+  end
 
+  # ==========================
+  # Handle calls
+  # ==========================
+
+  def handle_call(:listar_vuelos, _from, estado) do
+    {:reply, estado, estado}
+  end
+
+  def handle_call({:buscar_vuelo, id_vuelo}, _from, estado) do
+    vuelo =
+      Enum.find(estado, fn vuelo ->
+        vuelo.id == id_vuelo
+      end)
+
+    {:reply, vuelo, estado}
+  end
+
+  def handle_call(
+        {:buscar_por_destino, destino},
+        _from,
+        estado
+      ) do
+    vuelos =
+      Enum.filter(estado, fn vuelo ->
+        vuelo.destino == destino
+      end)
+
+    {:reply, vuelos, estado}
+  end
+
+  def handle_call(
+        {:buscar_por_fecha, fecha},
+        _from,
+        estado
+      ) do
+    vuelos =
+      Enum.filter(estado, fn vuelo ->
+        vuelo.fecha == fecha
+      end)
+
+    {:reply, vuelos, estado}
+  end
+
+  def handle_call(
+        {:obtener_asientos, id_vuelo},
+        _from,
+        estado
+      ) do
+    vuelo =
+      Enum.find(estado, fn vuelo ->
+        vuelo.id == id_vuelo
+      end)
+
+    if vuelo do
+      {:reply, vuelo.asientos, estado}
+    else
+      {:reply, nil, estado}
+    end
+  end
 
   defp crear_asientos do
     Enum.map(1..20, fn numero ->
