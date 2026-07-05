@@ -10,7 +10,8 @@ defmodule Vuelos.Aplicacion do
       Vuelos.Usuarios,
       {DynamicSupervisor, name: Vuelos.SupervisorVuelos, strategy: :one_for_one},
       {DynamicSupervisor, name: Vuelos.SupervisorConexiones, strategy: :one_for_one},
-      {Task.Supervisor, name: Vuelos.SupervisorTareas}
+      {Task.Supervisor, name: Vuelos.SupervisorTareas},
+      Vuelos.ServidorWeb
     ]
 
     opciones = [strategy: :rest_for_one, name: Vuelos.Supervisor]

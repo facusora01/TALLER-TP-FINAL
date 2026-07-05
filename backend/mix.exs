@@ -8,6 +8,7 @@ defmodule Vuelos.MixProject do
       elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
       test_pattern: "*Test.exs",
+      test_load_filters: [~r/Test\.exs$/],
       deps: deps()
     ]
   end
@@ -20,6 +21,10 @@ defmodule Vuelos.MixProject do
   end
 
   defp deps do
-    []
+    [
+      {:cowboy, "~> 2.12"},
+      {:jason, "~> 1.4"},
+      {:gun, "~> 2.1", only: :test}
+    ]
   end
 end
