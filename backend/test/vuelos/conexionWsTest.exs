@@ -76,9 +76,9 @@ defmodule Vuelos.ConexionWSTest do
 
     evento = Jason.encode!(%{type: "asiento_actualizado", payload: %{vuelo_id: 1, asiento: "3C"}})
 
-    # OJO: :ranch.procs es un truco provisorio porque todavía no tenemos Registry
+    # ranch.procs es por ahora para testear porque todavía no tenemos Registry
     # de conexiones. Cuando implementen el broadcast, cambien esto por el Registry
-    # y borren esta parte, porque sino queda un test atado a las tripas de Cowboy.
+    # y borren esta parte, porque sino queda un test apuntando directo a Cowboy.
     for pid <- :ranch.procs(Vuelos.ServidorWeb, :connections) do
       send(pid, {:enviar, evento})
     end
