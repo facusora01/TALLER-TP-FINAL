@@ -15,5 +15,6 @@ defmodule Vuelos.Aplicacion do
 
     opciones = [strategy: :rest_for_one, name: Vuelos.Supervisor]
     Supervisor.start_link(hijos, opciones)
+    |> tap(fn _ -> Vuelos.Seeds.cargar() end)
   end
 end
