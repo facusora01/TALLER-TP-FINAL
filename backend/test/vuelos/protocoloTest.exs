@@ -5,8 +5,10 @@ defmodule Vuelos.ProtocoloTest do
 
   setup do
     :dets.delete_all_objects(:usuarios)
-    :ok = Supervisor.terminate_child(Vuelos.Supervisor, Vuelos.Usuarios)
-    {:ok, _pid} = Supervisor.restart_child(Vuelos.Supervisor, Vuelos.Usuarios)
+    #:ok = Supervisor.terminate_child(Vuelos.Supervisor, Vuelos.Usuarios)
+    #{:ok, _pid} = Supervisor.restart_child(Vuelos.Supervisor, Vuelos.Usuarios)
+    :ok = Supervisor.terminate_child(Vuelos.SupervisorDominio, Vuelos.Usuarios)
+    {:ok, _pid} = Supervisor.restart_child(Vuelos.SupervisorDominio, Vuelos.Usuarios)
     :ok
   end
 

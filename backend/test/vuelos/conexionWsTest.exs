@@ -3,9 +3,11 @@ defmodule Vuelos.ConexionWSTest do
 
   setup do
     :dets.delete_all_objects(:usuarios)
-    :ok = Supervisor.terminate_child(Vuelos.Supervisor, Vuelos.Usuarios)
-    {:ok, _pid} = Supervisor.restart_child(Vuelos.Supervisor, Vuelos.Usuarios)
-
+    #:ok = Supervisor.terminate_child(Vuelos.Supervisor, Vuelos.Usuarios)
+    #{:ok, _pid} = Supervisor.restart_child(Vuelos.Supervisor, Vuelos.Usuarios)
+    :ok = Supervisor.terminate_child(Vuelos.SupervisorDominio, Vuelos.Usuarios)
+    {:ok, _pid} = Supervisor.restart_child(Vuelos.SupervisorDominio, Vuelos.Usuarios)
+      
     {:ok, conexion} = :gun.open(~c"localhost", Vuelos.ServidorWeb.puerto())
     {:ok, _protocolo} = :gun.await_up(conexion)
     ref = :gun.ws_upgrade(conexion, "/ws")

@@ -1,5 +1,4 @@
 defmodule Vuelos.Aplicacion do
-
   use Application
 
   @impl true
@@ -7,8 +6,7 @@ defmodule Vuelos.Aplicacion do
     hijos = [
       Vuelos.Persistencia,
       {Registry, keys: :unique, name: Vuelos.Registro},
-      Vuelos.Usuarios,
-      {DynamicSupervisor, name: Vuelos.SupervisorVuelos, strategy: :one_for_one},
+      Vuelos.SupervisorDominio,
       {DynamicSupervisor, name: Vuelos.SupervisorConexiones, strategy: :one_for_one},
       {Task.Supervisor, name: Vuelos.SupervisorTareas},
       Vuelos.ServidorWeb
