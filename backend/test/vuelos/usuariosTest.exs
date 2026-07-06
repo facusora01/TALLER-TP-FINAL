@@ -52,8 +52,10 @@ defmodule Vuelos.UsuariosTest do
   end
 
   defp reiniciar_usuarios do
-    :ok = Supervisor.terminate_child(Vuelos.Supervisor, Vuelos.Usuarios)
-    {:ok, _pid} = Supervisor.restart_child(Vuelos.Supervisor, Vuelos.Usuarios)
+    #:ok = Supervisor.terminate_child(Vuelos.Supervisor, Vuelos.Usuarios)
+    #{:ok, _pid} = Supervisor.restart_child(Vuelos.Supervisor, Vuelos.Usuarios)
+    :ok = Supervisor.terminate_child(Vuelos.SupervisorDominio, Vuelos.Usuarios)
+    {:ok, _pid} = Supervisor.restart_child(Vuelos.SupervisorDominio, Vuelos.Usuarios)
     :ok
   end
 end
