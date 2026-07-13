@@ -2,6 +2,7 @@ defmodule Vuelos.Seeds do
   @moduledoc "Carga los datos iniciales de aerolíneas y vuelos si no existen todavía."
 
   alias Vuelos.Persistencia
+  alias Vuelos.Vuelo
 
   def cargar do
     if Persistencia.todos(:vuelos) == [] do
@@ -32,7 +33,14 @@ defmodule Vuelos.Seeds do
 
   defp insertar_vuelos do
     Enum.each(vuelos(), fn v ->
-      Persistencia.guardar(:vuelos, {:vuelo, v.id}, v)
+      vuelo =
+        struct(Vuelo, Map.merge(v, %{
+          asientos: crear_asientos(v.asientos_totales),
+          reservas: %{},
+          proxima_reserva_id: 1
+        }))
+
+      Persistencia.guardar(:vuelos, {:vuelo, vuelo.id}, vuelo)
     end)
   end
 
@@ -98,5 +106,14 @@ defmodule Vuelos.Seeds do
       %{id: "ANW-009", aerolinea_id: "ANW", origen: "EZE", destino: "COR", fecha: ~D[2026-05-20], hora: ~T[10:30:00], precio: 81_000,  asientos_totales: 75},
       %{id: "ANW-010", aerolinea_id: "ANW", origen: "COR", destino: "EZE", fecha: ~D[2026-05-20], hora: ~T[16:00:00], precio: 81_000,  asientos_totales: 75}
     ]
+  end
+
+  defp crear_asientos(cantidad) do
+    Enum.map(1..cantidad, fn numero ->
+      %{
+        numero: numero,
+        estado: :libre
+      }
+    end)
   end
 end
