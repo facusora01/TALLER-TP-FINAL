@@ -23,6 +23,12 @@ defmodule Vuelos.Protocolo do
     respuesta("registrar_usuario_ok", request_id, %{usuario_id: usuario.id, nombre: usuario.nombre})
   end
 
+  defp despachar("iniciar_sesion", request_id, %{"nombre" => nombre})
+       when is_binary(nombre) do
+    {:ok, usuario} = Usuarios.iniciar_sesion(nombre)
+    respuesta("iniciar_sesion_ok", request_id, %{usuario_id: usuario.id, nombre: usuario.nombre})
+  end
+
   defp despachar("obtener_usuario", request_id, %{"usuario_id" => id}) do
     case Usuarios.obtener(id) do
       {:ok, usuario} ->
@@ -36,24 +42,39 @@ defmodule Vuelos.Protocolo do
   defp despachar("listar_vuelos", request_id, _payload) do
     vuelos =
       GestorVuelos.listar_vuelos()
-      |> Enum.map(fn vuelo ->
-        %{
-          id: vuelo.id,
-          aerolinea_id: vuelo.aerolinea_id,
-          origen: vuelo.origen,
-          destino: vuelo.destino,
-          fecha: vuelo.fecha,
-          hora: vuelo.hora,
-          precio: vuelo.precio,
-          asientos_totales: vuelo.asientos_totales
-        }
-      end)
+      |> Enum.map(&resumen_vuelo/1)
 
     respuesta(
       "listar_vuelos_ok",
       request_id,
       %{vuelos: vuelos}
     )
+  end
+
+  defp despachar("listar_aerolineas", request_id, _payload) do
+    respuesta(
+      "listar_aerolineas_ok",
+      request_id,
+      %{aerolineas: GestorVuelos.listar_aerolineas()}
+    )
+  end
+
+  defp despachar("mis_reservas", request_id, %{"usuario_id" => usuario_id}) do
+    case Usuarios.obtener(usuario_id) do
+      :error ->
+        error(
+          request_id,
+          "USUARIO_NO_EXISTE",
+          "No existe un usuario con ese id."
+        )
+
+      {:ok, _usuario} ->
+        respuesta(
+          "mis_reservas_ok",
+          request_id,
+          %{reservas: GestorVuelos.reservas_de_usuario(usuario_id)}
+        )
+    end
   end
 
   defp despachar("buscar_vuelo", request_id, %{"vuelo_id" => id}) do
@@ -69,16 +90,7 @@ defmodule Vuelos.Protocolo do
         respuesta(
           "buscar_vuelo_ok",
           request_id,
-          %{
-            id: vuelo.id,
-            aerolinea_id: vuelo.aerolinea_id,
-            origen: vuelo.origen,
-            destino: vuelo.destino,
-            fecha: vuelo.fecha,
-            hora: vuelo.hora,
-            precio: vuelo.precio,
-            asientos_totales: vuelo.asientos_totales
-          }
+          resumen_vuelo(vuelo)
         )
     end
   end
@@ -251,6 +263,20 @@ defmodule Vuelos.Protocolo do
 
   defp despachar(_tipo, request_id, _payload) do
     error(request_id, "MENSAJE_INVALIDO", "El mensaje no respeta el formato del protocolo.")
+  end
+
+  defp resumen_vuelo(vuelo) do
+    %{
+      id: vuelo.id,
+      aerolinea_id: vuelo.aerolinea_id,
+      origen: vuelo.origen,
+      destino: vuelo.destino,
+      fecha: vuelo.fecha,
+      hora: vuelo.hora,
+      precio: vuelo.precio,
+      asientos_totales: vuelo.asientos_totales,
+      asientos_disponibles: Enum.count(vuelo.asientos, &(&1.estado == :libre))
+    }
   end
 
   defp respuesta(tipo, request_id, payload) do

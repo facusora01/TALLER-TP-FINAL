@@ -24,6 +24,36 @@ defmodule Vuelos.GestorVuelos do
     end
   end
 
+  def listar_aerolineas do
+    Persistencia.todos(@tabla)
+    |> Enum.flat_map(fn
+      {{:aerolinea, _}, aerolinea} -> [aerolinea]
+      _ -> []
+    end)
+  end
+
+  def reservas_de_usuario(usuario_id) do
+    listar_vuelos()
+    |> Enum.flat_map(fn vuelo ->
+      vuelo.reservas
+      |> Map.values()
+      |> Enum.filter(fn reserva -> reserva.usuario.id == usuario_id end)
+      |> Enum.map(fn reserva ->
+        %{
+          reserva_id: reserva.id,
+          vuelo_id: vuelo.id,
+          aerolinea_id: vuelo.aerolinea_id,
+          origen: vuelo.origen,
+          destino: vuelo.destino,
+          fecha: vuelo.fecha,
+          hora: vuelo.hora,
+          numero_asiento: reserva.numero_asiento,
+          estado: reserva.estado
+        }
+      end)
+    end)
+  end
+
   def buscar_por_destino(destino) do
     listar_vuelos()
     |> Enum.filter(fn vuelo ->

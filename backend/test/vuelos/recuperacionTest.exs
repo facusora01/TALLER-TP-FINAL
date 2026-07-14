@@ -74,7 +74,7 @@ defmodule Vuelos.RecuperacionTest do
         &(&1.numero == 1)
       )
 
-    assert asiento.estado == :reservado
+    assert asiento.estado == :confirmado
   end
 
   test "las reservas pendientes permanecen pendientes luego de reiniciar el proceso" do

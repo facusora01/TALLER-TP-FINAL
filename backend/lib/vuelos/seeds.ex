@@ -32,9 +32,13 @@ defmodule Vuelos.Seeds do
   # --- Vuelos ---
 
   defp insertar_vuelos do
-    Enum.each(vuelos(), fn v ->
+    lista = vuelos()
+    corrimiento = corrimiento_fechas(lista)
+
+    Enum.each(lista, fn v ->
       vuelo =
         struct(Vuelo, Map.merge(v, %{
+          fecha: Date.add(v.fecha, corrimiento),
           asientos: crear_asientos(v.asientos_totales),
           reservas: %{},
           proxima_reserva_id: 1
@@ -42,6 +46,13 @@ defmodule Vuelos.Seeds do
 
       Persistencia.guardar(:vuelos, {:vuelo, vuelo.id}, vuelo)
     end)
+  end
+
+  # Días a sumar a todas las fechas para que el primer vuelo caiga unos días
+  # después de hoy, conservando el espaciado relativo original entre vuelos.
+  defp corrimiento_fechas(lista) do
+    fecha_min = lista |> Enum.map(& &1.fecha) |> Enum.min(Date)
+    Date.diff(Date.utc_today(), fecha_min) + 3
   end
 
   defp vuelos do
