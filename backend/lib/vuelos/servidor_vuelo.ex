@@ -164,9 +164,19 @@ defmodule Vuelos.ServidorVuelo do
               reserva_actualizada
             )
 
+          nuevos_asientos =
+            Enum.map(vuelo.asientos, fn asiento ->
+              if asiento.numero == reserva.numero_asiento do
+                %{asiento | estado: :confirmado}
+              else
+                asiento
+              end
+            end)
+
           vuelo_actualizado =
             %{vuelo |
-              reservas: reservas_actualizadas}
+              reservas: reservas_actualizadas,
+              asientos: nuevos_asientos}
             |> persistir()
 
           Vuelos.Broadcast.notificar(vuelo_actualizado)

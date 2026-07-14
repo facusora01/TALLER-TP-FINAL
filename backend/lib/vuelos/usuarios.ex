@@ -15,6 +15,11 @@ defmodule Vuelos.Usuarios do
     GenServer.call(__MODULE__, {:registrar, nombre})
   end
 
+  @doc "Devuelve el usuario con ese nombre si ya existe, o lo crea. Permite \"volver a entrar\"."
+  def iniciar_sesion(nombre) do
+    GenServer.call(__MODULE__, {:iniciar_sesion, nombre})
+  end
+
   def obtener(id) do
     GenServer.call(__MODULE__, {:obtener, id})
   end
@@ -30,10 +35,19 @@ defmodule Vuelos.Usuarios do
 
   @impl true
   def handle_call({:registrar, nombre}, _origen, usuarios) do
-    id = siguiente_id(usuarios)
-    usuario = %{id: id, nombre: nombre}
-    Persistencia.guardar(@tabla, id, usuario)
-    {:reply, {:ok, usuario}, Map.put(usuarios, id, usuario)}
+    {usuario, usuarios} = crear(nombre, usuarios)
+    {:reply, {:ok, usuario}, usuarios}
+  end
+
+  def handle_call({:iniciar_sesion, nombre}, _origen, usuarios) do
+    case Enum.find(usuarios, fn {_id, u} -> u.nombre == nombre end) do
+      {_id, usuario} ->
+        {:reply, {:ok, usuario}, usuarios}
+
+      nil ->
+        {usuario, usuarios} = crear(nombre, usuarios)
+        {:reply, {:ok, usuario}, usuarios}
+    end
   end
 
   def handle_call({:obtener, id}, _origen, usuarios) do
@@ -42,6 +56,13 @@ defmodule Vuelos.Usuarios do
 
   def handle_call(:listar, _origen, usuarios) do
     {:reply, Map.values(usuarios), usuarios}
+  end
+
+  defp crear(nombre, usuarios) do
+    id = siguiente_id(usuarios)
+    usuario = %{id: id, nombre: nombre}
+    Persistencia.guardar(@tabla, id, usuario)
+    {usuario, Map.put(usuarios, id, usuario)}
   end
 
   defp hidratar do
