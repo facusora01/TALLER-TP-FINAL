@@ -81,7 +81,16 @@ export default function DetalleVuelo({ vueloId, usuario }) {
     }
   }
 
-  if (error) return <p className="error">{error}</p>
+  // Vuelo inexistente o error de carga: mensaje claro y salida al listado.
+  if (error)
+    return (
+      <section>
+        <a href="#/" className="volver">
+          ← Volver al listado
+        </a>
+        <div className="aviso error">{error}</div>
+      </section>
+    )
   if (!vuelo || !asientos) return <p className="cargando">Cargando vuelo…</p>
 
   const libres = asientos.filter((a) => a.estado === 'libre').length
@@ -126,6 +135,12 @@ export default function DetalleVuelo({ vueloId, usuario }) {
         <div className={`aviso ${aviso.tipo}`}>
           {aviso.texto}
           {aviso.tipo === 'ok' && <a href="#/reservas"> Ver mis reservas</a>}
+        </div>
+      )}
+
+      {libres === 0 && (
+        <div className="aviso error">
+          Este vuelo no tiene asientos disponibles.
         </div>
       )}
 
