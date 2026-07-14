@@ -9,7 +9,18 @@ defmodule Vuelos.SupervisorDominio do
   def init(_opciones) do
     hijos = [
       Vuelos.Usuarios,
-      {DynamicSupervisor, name: Vuelos.SupervisorVuelos, strategy: :one_for_one}
+
+      {
+        Registry,
+        keys: :duplicate,
+        name: Vuelos.BroadcastRegistry
+      },
+
+      {
+        DynamicSupervisor,
+        name: Vuelos.SupervisorVuelos,
+        strategy: :one_for_one
+      }
     ]
 
     Supervisor.init(hijos, strategy: :one_for_one)
