@@ -7,23 +7,23 @@ defmodule Vuelos.Protocolo do
   alias Vuelos.{Usuarios, GestorVuelos}
 
   @doc "Atiende un mensaje de texto del cliente y devuelve la respuesta ya codificada en JSON."
-  def atender(texto) do
+  def atender(texto, pid \\ self()) do
     case Jason.decode(texto) do
       {:ok, %{"type" => tipo} = mensaje} ->
-        despachar(tipo, mensaje["request_id"], mensaje["payload"] || %{})
+        despachar(tipo, mensaje["request_id"], mensaje["payload"] || %{}, pid)
 
       _ ->
         error(nil, "MENSAJE_INVALIDO", "El mensaje no respeta el formato del protocolo.")
     end
   end
 
-  defp despachar("registrar_usuario", request_id, %{"nombre" => nombre})
+  defp despachar("registrar_usuario", request_id, %{"nombre" => nombre}, _pid)
        when is_binary(nombre) do
     {:ok, usuario} = Usuarios.registrar(nombre)
     respuesta("registrar_usuario_ok", request_id, %{usuario_id: usuario.id, nombre: usuario.nombre})
   end
 
-  defp despachar("obtener_usuario", request_id, %{"usuario_id" => id}) do
+  defp despachar("obtener_usuario", request_id, %{"usuario_id" => id}, _pid) do
     case Usuarios.obtener(id) do
       {:ok, usuario} ->
         respuesta("obtener_usuario_ok", request_id, %{usuario_id: usuario.id, nombre: usuario.nombre})
@@ -33,7 +33,7 @@ defmodule Vuelos.Protocolo do
     end
   end
 
-  defp despachar("listar_vuelos", request_id, _payload) do
+  defp despachar("listar_vuelos", request_id, _payload, _pid) do
     vuelos =
       GestorVuelos.listar_vuelos()
       |> Enum.map(fn vuelo ->
@@ -56,7 +56,7 @@ defmodule Vuelos.Protocolo do
     )
   end
 
-  defp despachar("buscar_vuelo", request_id, %{"vuelo_id" => id}) do
+  defp despachar("buscar_vuelo", request_id, %{"vuelo_id" => id}, _pid) do
     case GestorVuelos.buscar_vuelo(id) do
       nil ->
         error(
@@ -83,7 +83,7 @@ defmodule Vuelos.Protocolo do
     end
   end
 
-  defp despachar("obtener_asientos", request_id, %{"vuelo_id" => id}) do
+  defp despachar("obtener_asientos", request_id, %{"vuelo_id" => id}, _pid) do
     case GestorVuelos.obtener_asientos(id) do
       {:ok, asientos} ->
         respuesta(
@@ -101,7 +101,7 @@ defmodule Vuelos.Protocolo do
     end
   end
 
-  defp despachar("reservar_asiento", request_id, %{"vuelo_id" => vuelo_id, "numero_asiento" => numero_asiento, "usuario_id" => usuario_id}) do
+  defp despachar("reservar_asiento", request_id, %{"vuelo_id" => vuelo_id, "numero_asiento" => numero_asiento, "usuario_id" => usuario_id}, _pid) do
     case Usuarios.obtener(usuario_id) do
       :error ->
         error(
@@ -149,7 +149,7 @@ defmodule Vuelos.Protocolo do
     end
   end
 
-  defp despachar("confirmar_reserva", request_id, %{ "vuelo_id" => vuelo_id, "reserva_id" => reserva_id}) do
+  defp despachar("confirmar_reserva", request_id, %{ "vuelo_id" => vuelo_id, "reserva_id" => reserva_id}, _pid) do
     case GestorVuelos.confirmar_reserva(vuelo_id, reserva_id) do
       :ok ->
         respuesta(
@@ -181,7 +181,7 @@ defmodule Vuelos.Protocolo do
     end
   end
 
-  defp despachar("cancelar_reserva", request_id, %{ "vuelo_id" => vuelo_id, "reserva_id" => reserva_id}) do
+  defp despachar("cancelar_reserva", request_id, %{ "vuelo_id" => vuelo_id, "reserva_id" => reserva_id}, _pid) do
     case GestorVuelos.cancelar_reserva(vuelo_id, reserva_id) do
       :ok ->
         respuesta(
@@ -213,7 +213,7 @@ defmodule Vuelos.Protocolo do
     end
   end
 
-  defp despachar("expirar_reserva", request_id, %{"vuelo_id" => vuelo_id, "reserva_id" => reserva_id}) do
+  defp despachar("expirar_reserva", request_id, %{"vuelo_id" => vuelo_id, "reserva_id" => reserva_id}, _pid) do
     case GestorVuelos.expirar_reserva(vuelo_id, reserva_id) do
       :ok ->
         respuesta(
@@ -245,11 +245,21 @@ defmodule Vuelos.Protocolo do
     end
   end
 
-  defp despachar(tipo, request_id, _payload) when is_binary(tipo) do
+  defp despachar("suscribir_vuelo", request_id, %{"vuelo_id" => vuelo_id}, pid) do
+    Vuelos.Broadcast.subscribir(vuelo_id, pid)
+
+    respuesta(
+      "suscribir_vuelo_ok",
+      request_id,
+      %{}
+    )
+  end
+
+  defp despachar(tipo, request_id, _payload, _pid) when is_binary(tipo) do
     error(request_id, "TIPO_DESCONOCIDO", "El servidor no reconoce el tipo de mensaje.")
   end
 
-  defp despachar(_tipo, request_id, _payload) do
+  defp despachar(_tipo, request_id, _payload, _pid) do
     error(request_id, "MENSAJE_INVALIDO", "El mensaje no respeta el formato del protocolo.")
   end
 

@@ -8,7 +8,11 @@ defmodule Vuelos.ConexionWS do
   @behaviour :cowboy_websocket
 
   @impl true
-  def init(peticion, estado) do
+  def init(peticion, _estado) do
+    estado = %{
+      vuelo_id: nil
+    }
+
     {:cowboy_websocket, peticion, estado, %{idle_timeout: 600_000}}
   end
 
@@ -19,7 +23,7 @@ defmodule Vuelos.ConexionWS do
 
   @impl true
   def websocket_handle({:text, texto}, estado) do
-    {:reply, {:text, Vuelos.Protocolo.atender(texto)}, estado}
+    {:reply, {:text, Vuelos.Protocolo.atender(texto, self())}, estado}
   end
 
   def websocket_handle(_cuadro, estado) do
