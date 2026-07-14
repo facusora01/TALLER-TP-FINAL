@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { pedir, suscribir } from './../ws'
+import { pedir } from './../ws'
 
 // TAL-10: listado de vuelos con filtro por fecha/destino y orden por precio.
 export default function ListaVuelos() {
@@ -32,12 +32,8 @@ export default function ListaVuelos() {
       })
       .catch(() => {}) // sin nombres de aerolínea se muestra el código
 
-    // Si cambia un asiento en cualquier vuelo, la disponibilidad puede cambiar.
-    return suscribir((mensaje) => {
-      if (mensaje.type === 'asiento_actualizado') {
-        cargar()
-      }
-    })
+    // El listado no se suscribe a un vuelo puntual (el broadcast es por vuelo);
+    // la disponibilidad se refresca al volver a entrar a esta vista.
   }, [])
 
   const destinos = useMemo(() => {

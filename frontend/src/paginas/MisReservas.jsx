@@ -15,28 +15,33 @@ export default function MisReservas({ usuario }) {
   const [ocupada, setOcupada] = useState(null) // reserva_id con acción en curso
 
   const cargar = () => {
-    pedir('mis_reservas', { usuario_id: usuario.id })
+    return pedir('mis_reservas', { usuario_id: usuario.id })
       .then((payload) => {
         setReservas(payload.reservas)
         setError(null)
+        return payload.reservas
       })
-      .catch((e) =>
+      .catch((e) => {
         setError(e.mensaje || 'No se pudieron cargar las reservas.')
-      )
+        return []
+      })
   }
 
   useEffect(() => {
-    cargar()
-
-    // Push del servidor cuando una reserva cambia de estado (confirmada/expirada/etc.).
-    return suscribir((mensaje) => {
-      if (
-        mensaje.type === 'reserva_actualizada' ||
-        mensaje.type === 'asiento_actualizado'
-      ) {
-        cargar()
-      }
+    // El broadcast es por vuelo: nos suscribimos a cada vuelo donde el usuario
+    // tiene reservas, y ante cualquier cambio recargamos su listado.
+    const desuscribir = suscribir((mensaje) => {
+      if (mensaje.type === 'vuelo_actualizado') cargar()
     })
+
+    cargar().then((reservas) => {
+      const vuelos = [...new Set((reservas || []).map((r) => r.vuelo_id))]
+      vuelos.forEach((id) =>
+        pedir('suscribir_vuelo', { vuelo_id: id }).catch(() => {})
+      )
+    })
+
+    return desuscribir
   }, [usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const operar = async (tipo, reserva, mensajeError) => {

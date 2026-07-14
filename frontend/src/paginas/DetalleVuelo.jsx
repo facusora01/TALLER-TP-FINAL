@@ -40,19 +40,16 @@ export default function DetalleVuelo({ vueloId, usuario }) {
       .catch((e) => setError(e.mensaje || 'No se pudo cargar el vuelo.'))
     cargarAsientos()
 
-    // Push del servidor cuando otro cliente cambia un asiento de este vuelo.
+    // Nos suscribimos al vuelo para recibir sus cambios de asientos en vivo.
+    pedir('suscribir_vuelo', { vuelo_id: vueloId }).catch(() => {})
+
+    // El servidor emite `vuelo_actualizado` con la lista completa de asientos.
     return suscribir((mensaje) => {
       if (
-        mensaje.type === 'asiento_actualizado' &&
+        mensaje.type === 'vuelo_actualizado' &&
         mensaje.payload.vuelo_id === vueloId
       ) {
-        const numero =
-          mensaje.payload.numero_asiento ?? mensaje.payload.asiento
-        setAsientos((actuales) =>
-          actuales?.map((a) =>
-            a.numero === numero ? { ...a, estado: mensaje.payload.estado } : a
-          )
-        )
+        setAsientos(mensaje.payload.asientos)
       }
     })
   }, [vueloId]) // eslint-disable-line react-hooks/exhaustive-deps
