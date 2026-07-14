@@ -138,6 +138,8 @@ defmodule Vuelos.ServidorVuelo do
             proxima_reserva_id: id_reserva + 1}
           |> persistir()
 
+        Vuelos.Broadcast.notificar(vuelo_actualizado)
+
         {:reply, {:ok, id_reserva}, vuelo_actualizado}
     end
   end
@@ -176,6 +178,8 @@ defmodule Vuelos.ServidorVuelo do
               reservas: reservas_actualizadas,
               asientos: nuevos_asientos}
             |> persistir()
+
+          Vuelos.Broadcast.notificar(vuelo_actualizado)
 
           {:reply, :ok, vuelo_actualizado}
         else
@@ -219,6 +223,8 @@ defmodule Vuelos.ServidorVuelo do
               asientos: nuevos_asientos}
             |> persistir()
 
+          Vuelos.Broadcast.notificar(vuelo_actualizado)
+
           {:reply, :ok, vuelo_actualizado}
         else
           {:reply, :estado_invalido, vuelo}
@@ -261,6 +267,8 @@ defmodule Vuelos.ServidorVuelo do
               asientos: nuevos_asientos}
             |> persistir()
 
+          Vuelos.Broadcast.notificar(vuelo_actualizado)
+          
           {:reply, :ok, vuelo_actualizado}
         else
           {:reply, :estado_invalido, vuelo}
