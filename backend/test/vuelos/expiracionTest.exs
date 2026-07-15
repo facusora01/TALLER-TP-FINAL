@@ -73,6 +73,9 @@ defmodule Vuelos.ExpiracionTest do
         usuario
       )
 
+    # El pago se dispara al confirmar y confirma la reserva de forma asíncrona.
+    :ok = GestorVuelos.confirmar_reserva("ARC-001", reserva_id)
+
     Process.sleep(200)
 
     vuelo =
@@ -102,6 +105,10 @@ defmodule Vuelos.ExpiracionTest do
         3,
         usuario
       )
+
+    # El pago (100 ms) confirma antes de que venza el timer (300 ms); una vez
+    # confirmada, el timeout que llega después no debe volver a tocarla.
+    :ok = GestorVuelos.confirmar_reserva("ARC-001", reserva_id)
 
     Process.sleep(500)
 

@@ -95,7 +95,10 @@ defmodule Vuelos.BroadcastTest do
   end
 
   test "al confirmar una reserva se envía reserva_actualizada" do
-    Application.put_env(:vuelos, :demora_pago_ms, {5000, 5000})
+    # Pago rápido para no esperar; se limpia al terminar para no filtrar la
+    # demora a otros tests que comparten la config de la aplicación.
+    Application.put_env(:vuelos, :demora_pago_ms, {20, 20})
+    on_exit(fn -> Application.delete_env(:vuelos, :demora_pago_ms) end)
 
     vuelo_id = "ARC-001"
 
@@ -121,11 +124,12 @@ defmodule Vuelos.BroadcastTest do
         reserva_id
       )
 
+    # Al aprobarse el pago (asíncrono) llegan el broadcast del vuelo y el de la reserva.
     # broadcast del vuelo
-    assert_receive {:enviar, _}
+    assert_receive {:enviar, _}, 2_000
 
     # broadcast específico de la reserva
-    assert_receive {:enviar, mensaje}
+    assert_receive {:enviar, mensaje}, 2_000
 
     {:ok, json} =
       Jason.decode(mensaje)

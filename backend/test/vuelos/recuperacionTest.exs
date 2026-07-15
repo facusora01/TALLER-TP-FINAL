@@ -24,6 +24,9 @@ defmodule Vuelos.RecuperacionTest do
   test "el estado del vuelo se recupera luego de reiniciar su proceso" do
     vuelo_id = "ARC-001"
 
+    Application.put_env(:vuelos, :demora_pago_ms, {50, 50})
+    on_exit(fn -> Application.delete_env(:vuelos, :demora_pago_ms) end)
+
     {:ok, usuario} =
       Usuarios.registrar("Denisse")
 
@@ -40,6 +43,10 @@ defmodule Vuelos.RecuperacionTest do
                vuelo_id,
                reserva_id
              )
+
+    # El pago es asíncrono: esperamos a que la reserva quede confirmada antes
+    # de sincronizar a disco y reiniciar el proceso.
+    esperar_confirmada(vuelo_id, reserva_id)
 
     Persistencia.sincronizar()
 
@@ -119,5 +126,22 @@ defmodule Vuelos.RecuperacionTest do
       )
 
     assert asiento.estado == :reservado
+  end
+
+  # Espera (con reintentos) a que el pago asíncrono confirme la reserva.
+  defp esperar_confirmada(vuelo_id, reserva_id, intentos \\ 50) do
+    {:ok, vuelo} = GestorVuelos.obtener_estado(vuelo_id)
+
+    cond do
+      vuelo.reservas[reserva_id].estado == :confirmada ->
+        :ok
+
+      intentos == 0 ->
+        flunk("la reserva no se confirmó a tiempo")
+
+      true ->
+        Process.sleep(20)
+        esperar_confirmada(vuelo_id, reserva_id, intentos - 1)
+    end
   end
 end
