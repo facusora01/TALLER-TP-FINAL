@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { pedir, suscribir } from './../ws'
 
 export default function PagoReserva({ vueloId, reservaId, usuario }) {
-  const [segundos, setSegundos] = useState(60)
+  const [segundos, setSegundos] = useState(0)
   const [estado, setEstado] = useState('pendiente')
 
   const [vuelo, setVuelo] = useState(null)
@@ -14,7 +14,7 @@ export default function PagoReserva({ vueloId, reservaId, usuario }) {
     })
       .then(setVuelo)
       .catch(() => {})
-
+  
     pedir('mis_reservas', {
       usuario_id: usuario.id,
     })
@@ -24,12 +24,19 @@ export default function PagoReserva({ vueloId, reservaId, usuario }) {
             r.vuelo_id === vueloId &&
             r.reserva_id === reservaId
         )
-
+  
         if (encontrada) {
           setReserva(encontrada)
+          setSegundos(encontrada.segundos_restantes ?? 0)
         }
       })
       .catch(() => {})
+  
+    pedir('confirmar_reserva', {
+      vuelo_id: vueloId,
+      reserva_id: reservaId,
+    }).catch(() => {})
+  
   }, [vueloId, reservaId, usuario.id])
 
   useEffect(() => {

@@ -131,7 +131,8 @@ defmodule Vuelos.ServidorVuelo do
           id: id_reserva,
           numero_asiento: numero_asiento,
           usuario: usuario,
-          timer_ref: timer_ref
+          timer_ref: timer_ref,
+          creada_en: DateTime.utc_now()
         }
 
         reservas_actualizadas =
@@ -155,13 +156,11 @@ defmodule Vuelos.ServidorVuelo do
 
         Vuelos.Broadcast.notificar(vuelo_actualizado)
 
-        Pagos.procesar(id_reserva)
-
         {:reply, {:ok, id_reserva}, vuelo_actualizado}
     end
   end
 
-    @impl true
+  @impl true
   def handle_call({:confirmar_reserva, id_reserva}, _from, vuelo) do
     case Map.get(vuelo.reservas, id_reserva) do
       nil ->
@@ -169,42 +168,9 @@ defmodule Vuelos.ServidorVuelo do
 
       reserva ->
         if reserva.estado == :pendiente do
-          Process.cancel_timer(reserva.timer_ref)
-          reserva_actualizada = %{
-            reserva |
-            estado: :confirmada,
-            timer_ref: nil
-          }
+          Pagos.procesar(id_reserva)
 
-          reservas_actualizadas =
-            Map.put(
-              vuelo.reservas,
-              id_reserva,
-              reserva_actualizada
-            )
-
-          nuevos_asientos =
-            Enum.map(vuelo.asientos, fn asiento ->
-              if asiento.numero == reserva.numero_asiento do
-                %{asiento | estado: :confirmado}
-              else
-                asiento
-              end
-            end)
-
-          vuelo_actualizado =
-            %{vuelo |
-              reservas: reservas_actualizadas,
-              asientos: nuevos_asientos}
-            |> persistir()
-
-          Vuelos.Broadcast.notificar(vuelo_actualizado)
-          Vuelos.Broadcast.notificar_reserva(
-            vuelo_actualizado,
-            reserva_actualizada
-          )
-
-          {:reply, :ok, vuelo_actualizado}
+          {:reply, :ok, vuelo}
         else
           {:reply, :estado_invalido, vuelo}
         end

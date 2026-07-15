@@ -11,6 +11,7 @@ const ETIQUETAS = {
 // TAL-7: reservas del usuario con estado actual y cancelación de pendientes.
 export default function MisReservas({ usuario }) {
   const [reservas, setReservas] = useState(null)
+  const [tiempos, setTiempos] = useState({})
   const [error, setError] = useState(null)
   const [ocupada, setOcupada] = useState(null) // reserva_id con acción en curso
   const [aviso, setAviso] = useState(null)
@@ -19,6 +20,18 @@ export default function MisReservas({ usuario }) {
     return pedir('mis_reservas', { usuario_id: usuario.id })
       .then((payload) => {
         setReservas(payload.reservas)
+  
+        const nuevosTiempos = {}
+  
+        payload.reservas.forEach((r) => {
+          if (r.estado === 'pendiente') {
+            nuevosTiempos[r.reserva_id] =
+              r.segundos_restantes
+          }
+        })
+  
+        setTiempos(nuevosTiempos)
+  
         setError(null)
         return payload.reservas
       })
@@ -75,6 +88,22 @@ export default function MisReservas({ usuario }) {
     return desuscribir
   }, [usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTiempos((prev) => {
+        const actualizado = {}
+  
+        Object.entries(prev).forEach(([id, segundos]) => {
+          actualizado[id] = Math.max(segundos - 1, 0)
+        })
+  
+        return actualizado
+      })
+    }, 1000)
+  
+    return () => clearInterval(id)
+  }, [])
+
   const operar = async (tipo, reserva, mensajeError) => {
     setOcupada(reserva.reserva_id)
     setError(null)
@@ -91,8 +120,9 @@ export default function MisReservas({ usuario }) {
     }
   }
 
-  const confirmar = (reserva) =>
-    operar('confirmar_reserva', reserva, 'No se pudo confirmar la reserva.')
+  const confirmar = (reserva) => {
+    window.location.hash = `#/pago/${reserva.vuelo_id}/${reserva.reserva_id}`
+  }
   const cancelar = (reserva) =>
     operar('cancelar_reserva', reserva, 'No se pudo cancelar la reserva.')
 
@@ -149,6 +179,20 @@ export default function MisReservas({ usuario }) {
                   <span className={`estado ${r.estado}`}>
                     {ETIQUETAS[r.estado] || r.estado}
                   </span>
+
+                  {r.estado === 'pendiente' && (
+                    <div>
+                      ⏳ {String(
+                        Math.floor(
+                          (tiempos[r.reserva_id] ?? r.segundos_restantes) / 60
+                        )
+                      ).padStart(2, '0')}
+                      :
+                      {String(
+                        (tiempos[r.reserva_id] ?? r.segundos_restantes) % 60
+                      ).padStart(2, '0')}
+                    </div>
+                  )}
                 </td>
                 <td>
                   {r.estado === 'pendiente' && (
