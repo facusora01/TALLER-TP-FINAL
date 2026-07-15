@@ -284,6 +284,9 @@ defmodule Vuelos.Protocolo do
       fecha: vuelo.fecha,
       hora: vuelo.hora,
       precio: vuelo.precio,
+      # Map.get: los vuelos persistidos antes de TAL-32 no tienen estos campos.
+      avion: Map.get(vuelo, :avion),
+      distribucion: Map.get(vuelo, :distribucion, [3, 3]),
       asientos_totales: vuelo.asientos_totales,
       asientos_disponibles: Enum.count(vuelo.asientos, &(&1.estado == :libre))
     }

@@ -8,6 +8,12 @@ const ETIQUETAS = {
   expirada: 'Expirada',
 }
 
+const NOMBRES_CLASE = {
+  first: 'First Class',
+  business: 'Business',
+  economy: 'Economy',
+}
+
 // TAL-7: reservas del usuario con estado actual y cancelación de pendientes.
 export default function MisReservas({ usuario }) {
   const [reservas, setReservas] = useState(null)
@@ -157,6 +163,7 @@ export default function MisReservas({ usuario }) {
               <th>Trayecto</th>
               <th>Fecha</th>
               <th>Asiento</th>
+              <th>Clase</th>
               <th>Estado</th>
               <th></th>
             </tr>
@@ -175,6 +182,7 @@ export default function MisReservas({ usuario }) {
                   {r.fecha} {r.hora?.slice(0, 5)}
                 </td>
                 <td>{r.numero_asiento}</td>
+                <td>{NOMBRES_CLASE[r.clase] || '—'}</td>
                 <td>
                   <span className={`estado ${r.estado}`}>
                     {ETIQUETAS[r.estado] || r.estado}

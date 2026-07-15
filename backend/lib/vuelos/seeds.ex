@@ -31,15 +31,23 @@ defmodule Vuelos.Seeds do
 
   # --- Vuelos ---
 
+  # Narrow-body para cabotaje corto; wide-body (dos pasillos) para rutas largas.
+  @avion_narrow %{modelo: "Boeing 737-800", distribucion: [3, 3]}
+  @avion_wide %{modelo: "Airbus A340-300", distribucion: [2, 4, 2]}
+
   defp insertar_vuelos do
     lista = vuelos()
     corrimiento = corrimiento_fechas(lista)
 
     Enum.each(lista, fn v ->
+      avion = if v[:avion] == :wide, do: @avion_wide, else: @avion_narrow
+
       vuelo =
-        struct(Vuelo, Map.merge(v, %{
+        struct(Vuelo, Map.merge(Map.delete(v, :avion), %{
           fecha: Date.add(v.fecha, corrimiento),
-          asientos: crear_asientos(v.asientos_totales),
+          avion: avion.modelo,
+          distribucion: avion.distribucion,
+          asientos: crear_asientos(v.asientos_totales, avion.distribucion),
           reservas: %{},
           proxima_reserva_id: 1
         }))
@@ -70,8 +78,8 @@ defmodule Vuelos.Seeds do
       %{id: "ARC-010", aerolinea_id: "ARC", origen: "SLA", destino: "AEP", fecha: ~D[2026-05-08], hora: ~T[16:00:00], precio: 105_000, asientos_totales: 40},
 
       # FLS – FlySur
-      %{id: "FLS-001", aerolinea_id: "FLS", origen: "AEP", destino: "USH", fecha: ~D[2026-01-15], hora: ~T[06:00:00], precio: 180_000, asientos_totales: 40},
-      %{id: "FLS-002", aerolinea_id: "FLS", origen: "USH", destino: "AEP", fecha: ~D[2026-01-15], hora: ~T[12:00:00], precio: 180_000, asientos_totales: 40},
+      %{id: "FLS-001", aerolinea_id: "FLS", origen: "AEP", destino: "USH", fecha: ~D[2026-01-15], hora: ~T[06:00:00], precio: 180_000, asientos_totales: 96, avion: :wide},
+      %{id: "FLS-002", aerolinea_id: "FLS", origen: "USH", destino: "AEP", fecha: ~D[2026-01-15], hora: ~T[12:00:00], precio: 180_000, asientos_totales: 96, avion: :wide},
       %{id: "FLS-003", aerolinea_id: "FLS", origen: "EZE", destino: "NQN", fecha: ~D[2026-02-22], hora: ~T[08:00:00], precio: 90_000,  asientos_totales: 55},
       %{id: "FLS-004", aerolinea_id: "FLS", origen: "NQN", destino: "EZE", fecha: ~D[2026-02-22], hora: ~T[13:30:00], precio: 90_000,  asientos_totales: 55},
       %{id: "FLS-005", aerolinea_id: "FLS", origen: "AEP", destino: "TUC", fecha: ~D[2026-03-18], hora: ~T[07:30:00], precio: 88_000,  asientos_totales: 65},
@@ -96,8 +104,8 @@ defmodule Vuelos.Seeds do
       # CRU – Cruz Andina
       %{id: "CRU-001", aerolinea_id: "CRU", origen: "MDZ", destino: "BRC", fecha: ~D[2026-01-30], hora: ~T[09:00:00], precio: 85_000,  asientos_totales: 35},
       %{id: "CRU-002", aerolinea_id: "CRU", origen: "BRC", destino: "MDZ", fecha: ~D[2026-01-30], hora: ~T[14:00:00], precio: 85_000,  asientos_totales: 35},
-      %{id: "CRU-003", aerolinea_id: "CRU", origen: "EZE", destino: "USH", fecha: ~D[2026-02-18], hora: ~T[06:30:00], precio: 175_000, asientos_totales: 45},
-      %{id: "CRU-004", aerolinea_id: "CRU", origen: "USH", destino: "EZE", fecha: ~D[2026-02-18], hora: ~T[13:00:00], precio: 175_000, asientos_totales: 45},
+      %{id: "CRU-003", aerolinea_id: "CRU", origen: "EZE", destino: "USH", fecha: ~D[2026-02-18], hora: ~T[06:30:00], precio: 175_000, asientos_totales: 96, avion: :wide},
+      %{id: "CRU-004", aerolinea_id: "CRU", origen: "USH", destino: "EZE", fecha: ~D[2026-02-18], hora: ~T[13:00:00], precio: 175_000, asientos_totales: 96, avion: :wide},
       %{id: "CRU-005", aerolinea_id: "CRU", origen: "AEP", destino: "COR", fecha: ~D[2026-03-12], hora: ~T[07:45:00], precio: 78_000,  asientos_totales: 70},
       %{id: "CRU-006", aerolinea_id: "CRU", origen: "COR", destino: "AEP", fecha: ~D[2026-03-12], hora: ~T[12:30:00], precio: 78_000,  asientos_totales: 70},
       %{id: "CRU-007", aerolinea_id: "CRU", origen: "EZE", destino: "TUC", fecha: ~D[2026-04-24], hora: ~T[08:00:00], precio: 92_000,  asientos_totales: 60},
@@ -108,8 +116,8 @@ defmodule Vuelos.Seeds do
       # ANW – Andes Wings
       %{id: "ANW-001", aerolinea_id: "ANW", origen: "EZE", destino: "NQN", fecha: ~D[2026-01-08], hora: ~T[07:30:00], precio: 91_000,  asientos_totales: 55},
       %{id: "ANW-002", aerolinea_id: "ANW", origen: "NQN", destino: "EZE", fecha: ~D[2026-01-08], hora: ~T[13:00:00], precio: 91_000,  asientos_totales: 55},
-      %{id: "ANW-003", aerolinea_id: "ANW", origen: "AEP", destino: "USH", fecha: ~D[2026-02-26], hora: ~T[06:15:00], precio: 182_000, asientos_totales: 40},
-      %{id: "ANW-004", aerolinea_id: "ANW", origen: "USH", destino: "AEP", fecha: ~D[2026-02-26], hora: ~T[12:30:00], precio: 182_000, asientos_totales: 40},
+      %{id: "ANW-003", aerolinea_id: "ANW", origen: "AEP", destino: "USH", fecha: ~D[2026-02-26], hora: ~T[06:15:00], precio: 182_000, asientos_totales: 96, avion: :wide},
+      %{id: "ANW-004", aerolinea_id: "ANW", origen: "USH", destino: "AEP", fecha: ~D[2026-02-26], hora: ~T[12:30:00], precio: 182_000, asientos_totales: 96, avion: :wide},
       %{id: "ANW-005", aerolinea_id: "ANW", origen: "EZE", destino: "SLA", fecha: ~D[2026-03-22], hora: ~T[08:45:00], precio: 101_000, asientos_totales: 45},
       %{id: "ANW-006", aerolinea_id: "ANW", origen: "SLA", destino: "EZE", fecha: ~D[2026-03-22], hora: ~T[14:15:00], precio: 101_000, asientos_totales: 45},
       %{id: "ANW-007", aerolinea_id: "ANW", origen: "AEP", destino: "BRC", fecha: ~D[2026-04-15], hora: ~T[09:00:00], precio: 118_000, asientos_totales: 60},
@@ -119,12 +127,22 @@ defmodule Vuelos.Seeds do
     ]
   end
 
-  defp crear_asientos(cantidad) do
+  defp crear_asientos(cantidad, distribucion) do
+    por_fila = Enum.sum(distribucion)
+
     Enum.map(1..cantidad, fn numero ->
+      fila = div(numero - 1, por_fila) + 1
+
       %{
         numero: numero,
-        estado: :libre
+        estado: :libre,
+        clase: clase_para_fila(fila)
       }
     end)
   end
+
+  # Primeras filas First, luego Business, el resto Economy.
+  defp clase_para_fila(fila) when fila <= 2, do: :first
+  defp clase_para_fila(fila) when fila <= 5, do: :business
+  defp clase_para_fila(_fila), do: :economy
 end

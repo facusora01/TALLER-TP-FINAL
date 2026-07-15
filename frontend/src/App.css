@@ -435,6 +435,17 @@ button.confirmar:hover:not(:disabled) {
   letter-spacing: 1px;
 }
 
+.card-ruta .ciudad {
+  font-size: 11px;
+  color: var(--text-mute);
+  max-width: 110px;
+}
+
+.card-ruta .punta.derecha {
+  align-items: flex-end;
+  text-align: right;
+}
+
 .linea-vuelo {
   flex: 1;
   position: relative;
@@ -603,6 +614,46 @@ button.confirmar:hover:not(:disabled) {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.grupo-con-pasillo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Separador de sección por clase dentro de la cabina */
+.seccion-clase {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-mute);
+  padding: 10px 0 6px;
+  border-top: 1px dashed var(--border);
+  margin-top: 6px;
+}
+
+.seccion-clase.clase-first {
+  color: var(--oro);
+}
+
+.seccion-clase.clase-business {
+  color: var(--cyan);
+}
+
+/* La clase del asiento se marca con una franja inferior de color */
+.asiento.clase-first {
+  box-shadow: inset 0 -3px 0 var(--oro);
+}
+
+.asiento.clase-business {
+  box-shadow: inset 0 -3px 0 var(--cyan);
+}
+
+.leyenda.clases {
+  margin-top: -6px;
 }
 
 .num-fila {

@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { pedir } from './../ws'
+import { ciudad, coincideDestino } from './../aeropuertos'
 
-// TAL-10: listado de vuelos con filtro por fecha/destino y orden por precio.
+// TAL-10: listado de vuelos con filtros (fecha, destino, aerolínea) y orden por precio.
+// Sin orden elegido, los vuelos van del más próximo al más lejano en fecha.
 export default function ListaVuelos() {
   const [vuelos, setVuelos] = useState(null)
   const [aerolineas, setAerolineas] = useState({})
   const [error, setError] = useState(null)
 
   const [fecha, setFecha] = useState('')
-  const [destino, setDestino] = useState('')
+  const [destino, setDestino] = useState('') // texto libre: ciudad o código
+  const [aerolinea, setAerolinea] = useState('')
   const [orden, setOrden] = useState('') // '', 'asc' o 'desc'
 
   const cargar = () => {
@@ -43,20 +46,28 @@ export default function ListaVuelos() {
 
   const visibles = useMemo(() => {
     if (!vuelos) return []
-    let resultado = vuelos.filter(
+    const resultado = vuelos.filter(
       (v) =>
-        (!fecha || v.fecha === fecha) && (!destino || v.destino === destino)
+        (!fecha || v.fecha === fecha) &&
+        (!aerolinea || v.aerolinea_id === aerolinea) &&
+        coincideDestino(v.destino, destino)
     )
     if (orden === 'asc') {
-      resultado = [...resultado].sort((a, b) => a.precio - b.precio)
-    } else if (orden === 'desc') {
-      resultado = [...resultado].sort((a, b) => b.precio - a.precio)
+      return [...resultado].sort((a, b) => a.precio - b.precio)
     }
-    return resultado
-  }, [vuelos, fecha, destino, orden])
+    if (orden === 'desc') {
+      return [...resultado].sort((a, b) => b.precio - a.precio)
+    }
+    // Por defecto: del vuelo más cercano al más lejano (fecha ISO ordena bien).
+    return [...resultado].sort((a, b) =>
+      `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`)
+    )
+  }, [vuelos, fecha, destino, aerolinea, orden])
 
   if (error) return <p className="error">{error}</p>
   if (!vuelos) return <p className="cargando">Cargando vuelos…</p>
+
+  const hayFiltros = fecha || destino || aerolinea || orden
 
   return (
     <section>
@@ -73,29 +84,50 @@ export default function ListaVuelos() {
         </label>
         <label>
           Destino
-          <select value={destino} onChange={(e) => setDestino(e.target.value)}>
-            <option value="">Todos</option>
+          <input
+            type="text"
+            list="lista-destinos"
+            placeholder="Ciudad o código"
+            value={destino}
+            onChange={(e) => setDestino(e.target.value)}
+          />
+          <datalist id="lista-destinos">
             {destinos.map((d) => (
-              <option key={d} value={d}>
+              <option key={d} value={ciudad(d)}>
                 {d}
+              </option>
+            ))}
+          </datalist>
+        </label>
+        <label>
+          Aerolínea
+          <select
+            value={aerolinea}
+            onChange={(e) => setAerolinea(e.target.value)}
+          >
+            <option value="">Todas</option>
+            {Object.values(aerolineas).map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.nombre}
               </option>
             ))}
           </select>
         </label>
         <label>
-          Precio
+          Ordenar por
           <select value={orden} onChange={(e) => setOrden(e.target.value)}>
-            <option value="">Sin ordenar</option>
-            <option value="asc">Menor a mayor</option>
-            <option value="desc">Mayor a menor</option>
+            <option value="">Fecha más próxima</option>
+            <option value="asc">Precio: menor a mayor</option>
+            <option value="desc">Precio: mayor a menor</option>
           </select>
         </label>
-        {(fecha || destino || orden) && (
+        {hayFiltros && (
           <button
             className="limpiar"
             onClick={() => {
               setFecha('')
               setDestino('')
+              setAerolinea('')
               setOrden('')
             }}
           >
@@ -107,13 +139,13 @@ export default function ListaVuelos() {
       {visibles.length === 0 ? (
         <div className="vacio">
           <p className="vacio-titulo">No encontramos vuelos para esa búsqueda</p>
-          <p>Probá con otra fecha u otro destino.</p>
+          <p>Probá con otra fecha, destino o aerolínea.</p>
         </div>
       ) : (
         <div className="grilla-vuelos">
           {visibles.map((v) => {
-            const aerolinea = aerolineas[v.aerolinea_id]
-            const color = aerolinea?.color || '#8b96ab'
+            const info = aerolineas[v.aerolinea_id]
+            const color = info?.color || '#8b96ab'
             const agotado = v.asientos_disponibles === 0
             return (
               <article
@@ -123,18 +155,20 @@ export default function ListaVuelos() {
               >
                 <header className="card-aerolinea">
                   <span className="punto" style={{ background: color }} />
-                  {aerolinea?.nombre || v.aerolinea_id}
+                  {info?.nombre || v.aerolinea_id}
                 </header>
 
                 <div className="card-ruta">
                   <div className="punta">
                     <span className="cod">{v.origen}</span>
+                    <span className="ciudad">{ciudad(v.origen)}</span>
                   </div>
                   <div className="linea-vuelo">
                     <span className="avion">✈</span>
                   </div>
-                  <div className="punta">
+                  <div className="punta derecha">
                     <span className="cod">{v.destino}</span>
+                    <span className="ciudad">{ciudad(v.destino)}</span>
                   </div>
                 </div>
 

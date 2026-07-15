@@ -39,6 +39,9 @@ defmodule Vuelos.GestorVuelos do
       |> Map.values()
       |> Enum.filter(fn reserva -> reserva.usuario.id == usuario_id end)
       |> Enum.map(fn reserva ->
+        asiento =
+          Enum.find(vuelo.asientos, &(&1.numero == reserva.numero_asiento))
+
         %{
           reserva_id: reserva.id,
           vuelo_id: vuelo.id,
@@ -63,6 +66,8 @@ defmodule Vuelos.GestorVuelos do
             else
               0
             end
+          clase: asiento[:clase],
+          estado: reserva.estado
         }
       end)
     end)
