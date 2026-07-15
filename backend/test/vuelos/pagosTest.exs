@@ -3,6 +3,32 @@ defmodule Vuelos.PagosTest do
 
   alias Vuelos.Pagos
 
+  setup do
+    Application.put_env(
+      :vuelos,
+      :demora_pago_ms,
+      {1000, 1000}
+    )
+
+    on_exit(fn ->
+      Application.delete_env(
+        :vuelos,
+        :demora_pago_ms
+      )
+    end)
+
+    on_exit(fn ->
+      Enum.each(
+        DynamicSupervisor.which_children(Vuelos.SupervisorVuelos),
+        fn {_, pid, _, _} ->
+          Process.exit(pid, :kill)
+        end
+      )
+    end)
+
+    :ok
+  end
+
   test "el pago no se aprueba de inmediato: respeta la demora mínima" do
     {minimo, _maximo} = Pagos.rango_demora()
     inicio = System.monotonic_time(:millisecond)

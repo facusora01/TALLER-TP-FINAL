@@ -13,6 +13,7 @@ export default function MisReservas({ usuario }) {
   const [reservas, setReservas] = useState(null)
   const [error, setError] = useState(null)
   const [ocupada, setOcupada] = useState(null) // reserva_id con acción en curso
+  const [aviso, setAviso] = useState(null)
 
   const cargar = () => {
     return pedir('mis_reservas', { usuario_id: usuario.id })
@@ -31,7 +32,37 @@ export default function MisReservas({ usuario }) {
     // El broadcast es por vuelo: nos suscribimos a cada vuelo donde el usuario
     // tiene reservas, y ante cualquier cambio recargamos su listado.
     const desuscribir = suscribir((mensaje) => {
-      if (mensaje.type === 'vuelo_actualizado') cargar()
+      if (mensaje.type === 'vuelo_actualizado') {
+        cargar()
+        return
+      }
+    
+      if (mensaje.type === 'reserva_actualizada') {
+        cargar()
+    
+        const { estado, reserva_id } = mensaje.payload
+    
+        if (estado === 'confirmada') {
+          setAviso({
+            tipo: 'ok',
+            texto: `La reserva #${reserva_id} fue confirmada correctamente.`,
+          })
+        }
+    
+        if (estado === 'expirada') {
+          setAviso({
+            tipo: 'error',
+            texto: `La reserva #${reserva_id} expiró porque no fue confirmada a tiempo.`,
+          })
+        }
+    
+        if (estado === 'cancelada') {
+          setAviso({
+            tipo: 'ok',
+            texto: `La reserva #${reserva_id} fue cancelada.`,
+          })
+        }
+      }
     })
 
     cargar().then((reservas) => {
@@ -71,6 +102,12 @@ export default function MisReservas({ usuario }) {
   return (
     <section>
       <h2>Mis reservas</h2>
+
+      {aviso && (
+        <div className={`aviso ${aviso.tipo}`}>
+          {aviso.texto}
+        </div>
+      )}
 
       {error && <p className="error">{error}</p>}
 

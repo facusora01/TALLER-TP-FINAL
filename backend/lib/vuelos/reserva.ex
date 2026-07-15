@@ -5,6 +5,7 @@ defmodule Vuelos.Reserva do
     :id,
     :numero_asiento,
     :usuario,
+    :timer_ref,
     estado: :pendiente
   ]
 end

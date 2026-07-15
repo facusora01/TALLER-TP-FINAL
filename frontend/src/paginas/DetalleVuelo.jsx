@@ -64,12 +64,7 @@ export default function DetalleVuelo({ vueloId, usuario }) {
         numero_asiento: asiento.numero,
         usuario_id: usuario.id,
       })
-      setAviso({
-        tipo: 'ok',
-        texto: `Reserva #${payload.reserva_id} creada para el asiento ${etiquetaAsiento(
-          asiento.numero
-        )}. Confirmala desde "Mis reservas" antes de que expire.`,
-      })
+      window.location.hash =`#/pago/${vueloId}/${payload.reserva_id}`
     } catch (e) {
       setAviso({
         tipo: 'error',

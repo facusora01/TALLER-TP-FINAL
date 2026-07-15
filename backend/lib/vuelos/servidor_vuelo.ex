@@ -3,8 +3,15 @@ defmodule Vuelos.ServidorVuelo do
 
   use GenServer
 
-  alias Vuelos.{Persistencia, Reserva}
-
+  alias Vuelos.{Persistencia, Reserva, Pagos}
+  
+  defp tiempo_expiracion do
+    Application.get_env(
+      :vuelos,
+      :tiempo_expiracion_ms,
+      60_000
+    )
+  end
 
   def child_spec(vuelo) do
     %{
@@ -113,10 +120,18 @@ defmodule Vuelos.ServidorVuelo do
       true ->
         id_reserva = vuelo.proxima_reserva_id
 
+        timer_ref =
+          Process.send_after(
+            self(),
+            {:expirar_reserva_timeout, id_reserva},
+            tiempo_expiracion()
+          )
+
         reserva = %Reserva{
           id: id_reserva,
           numero_asiento: numero_asiento,
-          usuario: usuario
+          usuario: usuario,
+          timer_ref: timer_ref
         }
 
         reservas_actualizadas =
@@ -140,6 +155,8 @@ defmodule Vuelos.ServidorVuelo do
 
         Vuelos.Broadcast.notificar(vuelo_actualizado)
 
+        Pagos.procesar(id_reserva)
+
         {:reply, {:ok, id_reserva}, vuelo_actualizado}
     end
   end
@@ -152,9 +169,11 @@ defmodule Vuelos.ServidorVuelo do
 
       reserva ->
         if reserva.estado == :pendiente do
+          Process.cancel_timer(reserva.timer_ref)
           reserva_actualizada = %{
             reserva |
-            estado: :confirmada
+            estado: :confirmada,
+            timer_ref: nil
           }
 
           reservas_actualizadas =
@@ -180,6 +199,10 @@ defmodule Vuelos.ServidorVuelo do
             |> persistir()
 
           Vuelos.Broadcast.notificar(vuelo_actualizado)
+          Vuelos.Broadcast.notificar_reserva(
+            vuelo_actualizado,
+            reserva_actualizada
+          )
 
           {:reply, :ok, vuelo_actualizado}
         else
@@ -196,9 +219,12 @@ defmodule Vuelos.ServidorVuelo do
 
       reserva ->
         if reserva.estado == :pendiente do
+          Process.cancel_timer(reserva.timer_ref)
+
           reserva_actualizada = %{
             reserva |
-            estado: :cancelada
+            estado: :cancelada,
+            timer_ref: nil
           }
 
           reservas_actualizadas =
@@ -224,6 +250,10 @@ defmodule Vuelos.ServidorVuelo do
             |> persistir()
 
           Vuelos.Broadcast.notificar(vuelo_actualizado)
+          Vuelos.Broadcast.notificar_reserva(
+            vuelo_actualizado,
+            reserva_actualizada
+          )
 
           {:reply, :ok, vuelo_actualizado}
         else
@@ -242,7 +272,8 @@ defmodule Vuelos.ServidorVuelo do
         if reserva.estado == :pendiente do
           reserva_actualizada = %{
             reserva |
-            estado: :expirada
+            estado: :expirada,
+            timer_ref: nil
           }
 
           reservas_actualizadas =
@@ -268,11 +299,114 @@ defmodule Vuelos.ServidorVuelo do
             |> persistir()
 
           Vuelos.Broadcast.notificar(vuelo_actualizado)
+          Vuelos.Broadcast.notificar_reserva(
+            vuelo_actualizado,
+            reserva_actualizada
+          )
           
           {:reply, :ok, vuelo_actualizado}
         else
           {:reply, :estado_invalido, vuelo}
       end
+    end
+  end
+
+  @impl true
+  def handle_info({:expirar_reserva_timeout, id_reserva}, vuelo) do
+    case Map.get(vuelo.reservas, id_reserva) do
+      nil ->
+        {:noreply, vuelo}
+
+      %{estado: :pendiente} ->
+        reserva = vuelo.reservas[id_reserva]
+
+        reserva_actualizada = %{
+          reserva |
+          estado: :expirada
+        }
+
+        reservas_actualizadas =
+          Map.put(
+            vuelo.reservas,
+            id_reserva,
+            reserva_actualizada
+          )
+
+        nuevos_asientos =
+          Enum.map(vuelo.asientos, fn asiento ->
+            if asiento.numero == reserva.numero_asiento do
+              %{asiento | estado: :libre}
+            else
+              asiento
+            end
+          end)
+
+        vuelo_actualizado =
+          %{vuelo |
+            reservas: reservas_actualizadas,
+            asientos: nuevos_asientos}
+          |> persistir()
+
+        Vuelos.Broadcast.notificar(vuelo_actualizado)
+        Vuelos.Broadcast.notificar_reserva(
+          vuelo_actualizado,
+          reserva_actualizada
+        )
+
+        {:noreply, vuelo_actualizado}
+
+      _ ->
+        {:noreply, vuelo}
+    end
+  end
+
+  @impl true
+  def handle_info({:pago_aprobado, id_reserva}, vuelo) do
+    case Map.get(vuelo.reservas, id_reserva) do
+      nil ->
+        {:noreply, vuelo}
+
+      %{estado: :pendiente} = reserva ->
+        Process.cancel_timer(reserva.timer_ref)
+
+        reserva_actualizada = %{
+          reserva |
+          estado: :confirmada,
+          timer_ref: nil
+        }
+
+        reservas_actualizadas =
+          Map.put(
+            vuelo.reservas,
+            id_reserva,
+            reserva_actualizada
+          )
+
+        nuevos_asientos =
+          Enum.map(vuelo.asientos, fn asiento ->
+            if asiento.numero == reserva.numero_asiento do
+              %{asiento | estado: :confirmado}
+            else
+              asiento
+            end
+          end)
+
+        vuelo_actualizado =
+          %{vuelo |
+            reservas: reservas_actualizadas,
+            asientos: nuevos_asientos}
+          |> persistir()
+
+        Vuelos.Broadcast.notificar(vuelo_actualizado)
+        Vuelos.Broadcast.notificar_reserva(
+          vuelo_actualizado,
+          reserva_actualizada
+        )
+
+        {:noreply, vuelo_actualizado}
+
+      _ ->
+        {:noreply, vuelo}
     end
   end
 end
