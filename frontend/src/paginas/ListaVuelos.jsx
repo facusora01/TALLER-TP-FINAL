@@ -114,11 +114,11 @@ export default function ListaVuelos() {
           </select>
         </label>
         <label>
-          Precio
+          Ordenar por
           <select value={orden} onChange={(e) => setOrden(e.target.value)}>
             <option value="">Fecha más próxima</option>
-            <option value="asc">Menor a mayor</option>
-            <option value="desc">Mayor a menor</option>
+            <option value="asc">Precio: menor a mayor</option>
+            <option value="desc">Precio: mayor a menor</option>
           </select>
         </label>
         {hayFiltros && (
