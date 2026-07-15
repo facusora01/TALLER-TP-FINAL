@@ -4,6 +4,7 @@ import { usuarioGuardado, iniciarSesion, validar, cerrarSesion } from './usuario
 import ListaVuelos from './paginas/ListaVuelos'
 import DetalleVuelo from './paginas/DetalleVuelo'
 import MisReservas from './paginas/MisReservas'
+import PagoReserva from './paginas/PagoReserva'
 import './App.css'
 
 // Logo: aguja de brújula estilizada (guiño a "Nomad").
@@ -30,6 +31,13 @@ function useRuta() {
   const partes = hash.replace(/^#\/?/, '').split('/')
   if (partes[0] === 'vuelo' && partes[1]) {
     return { pagina: 'vuelo', vueloId: decodeURIComponent(partes[1]) }
+  }
+  if (partes[0] === 'pago' && partes[1] && partes[2]) {
+    return {
+      pagina: 'pago',
+      vueloId: decodeURIComponent(partes[1]),
+      reservaId: Number(partes[2]),
+    }
   }
   if (partes[0] === 'reservas') {
     return { pagina: 'reservas' }
@@ -150,10 +158,25 @@ function App() {
 
       <main>
         {ruta.pagina === 'vuelos' && <ListaVuelos />}
+
         {ruta.pagina === 'vuelo' && (
-          <DetalleVuelo vueloId={ruta.vueloId} usuario={usuario} />
+          <DetalleVuelo
+            vueloId={ruta.vueloId}
+            usuario={usuario}
+          />
         )}
-        {ruta.pagina === 'reservas' && <MisReservas usuario={usuario} />}
+
+        {ruta.pagina === 'pago' && (
+          <PagoReserva
+            vueloId={ruta.vueloId}
+            reservaId={ruta.reservaId}
+            usuario={usuario}
+          />
+        )}
+
+        {ruta.pagina === 'reservas' && (
+          <MisReservas usuario={usuario} />
+        )}
       </main>
     </div>
   )

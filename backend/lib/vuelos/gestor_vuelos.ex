@@ -51,6 +51,21 @@ defmodule Vuelos.GestorVuelos do
           fecha: vuelo.fecha,
           hora: vuelo.hora,
           numero_asiento: reserva.numero_asiento,
+          estado: reserva.estado,
+          segundos_restantes:
+            if reserva.estado == :pendiente do
+              max(
+                60 -
+                DateTime.diff(
+                  DateTime.utc_now(),
+                  reserva.creada_en,
+                  :second
+                ),
+                0
+              )
+            else
+              0
+            end
           clase: asiento[:clase],
           estado: reserva.estado
         }

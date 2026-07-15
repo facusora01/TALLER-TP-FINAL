@@ -18,6 +18,15 @@ defmodule Vuelos.BroadcastTest do
 
     Vuelos.Seeds.cargar()
 
+    on_exit(fn ->
+      Enum.each(
+        DynamicSupervisor.which_children(Vuelos.SupervisorVuelos),
+        fn {_, pid, _, _} ->
+          Process.exit(pid, :kill)
+        end
+      )
+    end)
+
     :ok
   end
 
@@ -83,5 +92,45 @@ defmodule Vuelos.BroadcastTest do
     assert_receive {:cliente_recibio, {:enviar, _}}
 
     Process.exit(cliente, :kill)
+  end
+
+  test "al confirmar una reserva se envía reserva_actualizada" do
+    Application.put_env(:vuelos, :demora_pago_ms, {5000, 5000})
+
+    vuelo_id = "ARC-001"
+
+    {:ok, _} =
+      Broadcast.subscribir(vuelo_id, self())
+
+    {:ok, usuario} =
+      Usuarios.registrar("Pedro")
+
+    {:ok, reserva_id} =
+      GestorVuelos.reservar_asiento(
+        vuelo_id,
+        3,
+        usuario
+      )
+
+    # descarto el broadcast de la reserva
+    assert_receive {:enviar, _}
+
+    :ok =
+      GestorVuelos.confirmar_reserva(
+        vuelo_id,
+        reserva_id
+      )
+
+    # broadcast del vuelo
+    assert_receive {:enviar, _}
+
+    # broadcast específico de la reserva
+    assert_receive {:enviar, mensaje}
+
+    {:ok, json} =
+      Jason.decode(mensaje)
+
+    assert json["type"] == "reserva_actualizada"
+    assert json["payload"]["estado"] == "confirmada"
   end
 end

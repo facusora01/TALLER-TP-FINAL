@@ -26,4 +26,23 @@ defmodule Vuelos.Broadcast do
       end)
     end)
   end
+
+  def notificar_reserva(vuelo, reserva) do
+    Registry.dispatch(@registry, vuelo.id, fn entradas ->
+      mensaje =
+        Jason.encode!(%{
+          type: "reserva_actualizada",
+          payload: %{
+            vuelo_id: vuelo.id,
+            reserva_id: reserva.id,
+            usuario_id: reserva.usuario.id,
+            estado: reserva.estado
+          }
+        })
+
+      Enum.each(entradas, fn {pid, _} ->
+        send(pid, {:enviar, mensaje})
+      end)
+    end)
+  end
 end
