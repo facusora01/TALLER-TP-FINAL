@@ -65,9 +65,8 @@ defmodule Vuelos.GestorVuelos do
               )
             else
               0
-            end
+            end,
           clase: asiento[:clase],
-          estado: reserva.estado
         }
       end)
     end)
