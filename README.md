@@ -93,28 +93,20 @@ mix test
 
 ---
 
-## Arquitectura cliente-servidor
+## Arquitectura y diagramas
 
-```
-┌────────────┐   WebSocket (JSON)   ┌─────────────────────────────────────────┐
-│  React     │ ───── mensajes ────► │  Cowboy  ·  /ws                          │
-│  (Vite)    │                      │    │                                     │
-│            │ ◄──── eventos ────── │    ▼                                     │
-│  - Listado │      push en vivo    │  ConexionWS (1 proceso por cliente)      │
-│  - Detalle │                      │    │  delega en                          │
-│  - Reservas│                      │    ▼                                     │
-└────────────┘                      │  Protocolo  ──►  GestorVuelos / Usuarios │
-                                    │                      │                   │
-                                    │                      ▼                   │
-                                    │              ServidorVuelo (GenServer,   │
-                                    │              uno por vuelo, único punto  │
-                                    │              de escritura del estado)    │
-                                    │                      │                   │
-                                    │            persiste  ▼   notifica        │
-                                    │                    DETS   Broadcast ─────┼──► push a
-                                    │                                          │    suscriptores
-                                    └─────────────────────────────────────────┘
-```
+### Arquitectura cliente-servidor
+
+![Arquitectura cliente-servidor](docs/ArqClienteServidor.png)
+
+### Árbol de supervisión OTP
+
+![Árbol de supervisión OTP](docs/ArbolOTP.png)
+
+Las fuentes PlantUML de ambos diagramas están en
+[`docs/diagramas/`](docs/diagramas/).
+
+Ideas clave de la arquitectura:
 
 - Cada **conexión WebSocket** es un proceso propio.
 - Cada **vuelo** es un `GenServer` (`ServidorVuelo`) que serializa todas las
@@ -122,26 +114,12 @@ mix test
   el mismo asiento (no hay race conditions).
 - Al cambiar un asiento, el `ServidorVuelo` **persiste** en DETS y **notifica**
   vía `Broadcast` a todos los clientes suscriptos a ese vuelo.
-
-## Árbol de supervisión
-
-```
-Vuelos.Supervisor  (strategy: rest_for_one)
-├── Vuelos.Persistencia            (GenServer · tablas DETS)
-├── Registry  Vuelos.Registro      (:unique · lookup de ServidorVuelo por id)
-├── Registry  Vuelos.Suscriptores  (:duplicate)
-├── Vuelos.SupervisorDominio       (Supervisor · one_for_one)
-│   ├── Vuelos.Usuarios            (GenServer · registro/login)
-│   ├── Registry Vuelos.BroadcastRegistry  (:duplicate · suscriptores por vuelo)
-│   └── Vuelos.SupervisorVuelos    (DynamicSupervisor · un ServidorVuelo por vuelo, on-demand)
-├── Vuelos.SupervisorConexiones    (DynamicSupervisor · procesos de conexión)
-├── Vuelos.SupervisorTareas        (Task.Supervisor · tareas auxiliares, ej. pago)
-└── Vuelos.ServidorWeb             (Cowboy · HTTP/WS en :4000)
-```
-
-Separación de responsabilidades: **conexión** (ConexionWS), **dominio**
-(ServidorVuelo, Usuarios) y **tareas auxiliares** (Task.Supervisor) están en
-ramas distintas del árbol.
+- El **pago simulado** corre como tarea supervisada (1–5 s al azar) y confirma
+  de forma asíncrona; cada reserva pendiente tiene un **timer de expiración de
+  1 minuto** que libera el asiento si no se confirma.
+- Separación de responsabilidades: **conexión** (ConexionWS), **dominio**
+  (ServidorVuelo, Usuarios) y **tareas auxiliares** (pagos y timers) viven en
+  ramas distintas del árbol de supervisión.
 
 ---
 
@@ -165,7 +143,7 @@ El servidor responde con `<type>_ok` reusando el `request_id`, o con un mensaje
 | `obtener_asientos` | Estado de los asientos de un vuelo |
 | `suscribir_vuelo` | Suscribe la conexión a los cambios de ese vuelo |
 | `reservar_asiento` | Inicia una reserva (asiento → reservado) |
-| `confirmar_reserva` | Confirma (asiento → confirmado) |
+| `confirmar_reserva` | Inicia el pago simulado (1–5 s); al aprobarse, asiento → confirmado |
 | `cancelar_reserva` | Cancela una reserva pendiente (libera el asiento) |
 | `mis_reservas` | Reservas del usuario con su estado |
 
@@ -196,11 +174,16 @@ los asientos se restauran tal como estaban.
 1. Abrí http://localhost:5173 e ingresá con un nombre.
 2. En el listado, filtrá por fecha/destino y **ordená por precio**.
 3. Entrá a un vuelo → se ve el **mapa de asientos** (disponible / reservado / confirmado).
-4. Clic en un asiento libre → se crea la **reserva (pendiente)**.
-5. Andá a **Mis reservas** → **Confirmar** (asiento → confirmado) o **Cancelar**.
-6. **Tiempo real:** abrí una segunda pestaña en el mismo vuelo; al reservar en
+4. Clic en un asiento libre → se crea la **reserva (pendiente)**, con 1 minuto
+   para confirmarla antes de que expire.
+5. Andá a **Mis reservas** → **Confirmar** abre la pantalla de **pago simulado**
+   (tarda 1–5 s) → al aprobarse, el asiento queda **confirmado**. También podés
+   **Cancelar** una pendiente.
+6. **Expiración:** si dejás pasar el minuto sin pagar, la reserva expira sola y
+   el asiento se libera.
+7. **Tiempo real:** abrí una segunda pestaña en el mismo vuelo; al reservar en
    una, la otra se actualiza sola.
-7. **Persistencia:** frená el backend y volvé a levantarlo → tus reservas y el
+8. **Persistencia:** frená el backend y volvé a levantarlo → tus reservas y el
    estado de los asientos siguen ahí.
 
 ---
