@@ -7,7 +7,22 @@ defmodule Vuelos.ConexionWSTest do
     #{:ok, _pid} = Supervisor.restart_child(Vuelos.Supervisor, Vuelos.Usuarios)
     :ok = Supervisor.terminate_child(Vuelos.SupervisorDominio, Vuelos.Usuarios)
     {:ok, _pid} = Supervisor.restart_child(Vuelos.SupervisorDominio, Vuelos.Usuarios)
-      
+
+    # Vuelos limpios en cada corrida: el asiento a reservar arranca libre.
+    :dets.delete_all_objects(:vuelos)
+
+    Enum.each(DynamicSupervisor.which_children(Vuelos.SupervisorVuelos), fn
+      {_, pid, _, _} -> Process.exit(pid, :kill)
+    end)
+
+    Vuelos.Seeds.cargar()
+
+    on_exit(fn ->
+      Enum.each(DynamicSupervisor.which_children(Vuelos.SupervisorVuelos), fn
+        {_, pid, _, _} -> Process.exit(pid, :kill)
+      end)
+    end)
+
     {:ok, conexion} = :gun.open(~c"localhost", Vuelos.ServidorWeb.puerto())
     {:ok, _protocolo} = :gun.await_up(conexion)
     ref = :gun.ws_upgrade(conexion, "/ws")
@@ -71,21 +86,27 @@ defmodule Vuelos.ConexionWSTest do
     assert Enum.sort(ids) == [1, 2]
   end
 
-  test "la conexión reenvía al cliente los mensajes push {:enviar, texto}", contexto do
+  test "un cliente suscripto recibe por WebSocket el broadcast al reservarse un asiento", contexto do
     %{conexion: conexion, ref: ref} = contexto
 
-    pedir(conexion, ref, %{type: "registrar_usuario", request_id: "1", payload: %{nombre: "Ana"}})
+    vuelo_id = "ARC-001"
 
-    evento = Jason.encode!(%{type: "asiento_actualizado", payload: %{vuelo_id: 1, asiento: "3C"}})
+    # El cliente se suscribe al vuelo.
+    assert %{"type" => "suscribir_vuelo_ok"} =
+             pedir(conexion, ref, %{
+               type: "suscribir_vuelo",
+               request_id: "1",
+               payload: %{vuelo_id: vuelo_id}
+             })
 
-    # ranch.procs es por ahora para testear porque todavía no tenemos Registry
-    # de conexiones. Cuando implementen el broadcast, cambien esto por el Registry
-    # y borren esta parte, porque sino queda un test apuntando directo a Cowboy.
-    for pid <- :ranch.procs(Vuelos.ServidorWeb, :connections) do
-      send(pid, {:enviar, evento})
-    end
+    # Una reserva dispara el broadcast.
+    {:ok, usuario} = Vuelos.Usuarios.registrar("Ana")
+    {:ok, _reserva_id} = Vuelos.GestorVuelos.reservar_asiento(vuelo_id, 1, usuario)
 
+    # La actualización llega al cliente por el WebSocket.
     assert_receive {:gun_ws, ^conexion, ^ref, {:text, recibido}}, 2_000
-    assert %{"type" => "asiento_actualizado"} = Jason.decode!(recibido)
+
+    assert %{"type" => "vuelo_actualizado", "payload" => %{"vuelo_id" => ^vuelo_id}} =
+             Jason.decode!(recibido)
   end
 end
