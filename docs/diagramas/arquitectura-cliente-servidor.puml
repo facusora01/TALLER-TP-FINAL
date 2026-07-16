@@ -1,0 +1,36 @@
+@startuml arquitectura-cliente-servidor
+title Arquitectura cliente-servidor
+
+skinparam defaultTextAlignment center
+skinparam ranksep 45
+
+rectangle "React\n(browser)" as REACT
+rectangle "ConexionWS\n(Cowboy /ws, un proceso por cliente)" as WS
+rectangle "Protocolo" as PROTO
+rectangle "ServidorVuelo\n(GenServer por vuelo)" as SV
+
+rectangle "Pagos\n(async, 1–5 s)" as PAGOS
+database "DETS" as DETS
+rectangle "Broadcast" as BCAST
+
+REACT -down-> WS : mensajes JSON
+WS -down-> PROTO
+PROTO -down-> SV
+
+SV -down-> PAGOS : pago
+PAGOS -up-> SV : aprobado
+SV -down-> DETS : persiste
+SV -down-> BCAST : notifica
+
+BCAST .up.> WS : push vuelo_actualizado
+WS .up.> REACT : respuestas y eventos en vivo
+
+note right of SV
+  timer de expiración:
+  1 min por reserva pendiente
+end note
+
+PAGOS -[hidden]right- DETS
+DETS -[hidden]right- BCAST
+
+@enduml

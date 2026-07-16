@@ -1,0 +1,37 @@
+@startuml arbol-supervision
+title Árbol de supervisión OTP
+
+skinparam linetype ortho
+skinparam defaultTextAlignment center
+
+rectangle "Vuelos.Supervisor\n(rest_for_one)" as SUP
+
+rectangle "Persistencia\n(DETS)" as PER
+rectangle "Registry\nRegistro" as REG
+rectangle "Registry\nSuscriptores" as SUS
+rectangle "SupervisorDominio" as DOM
+rectangle "SupervisorConexiones\n(DynamicSupervisor)" as CON
+rectangle "SupervisorTareas\n(pagos)" as TAR
+rectangle "ServidorWeb\n(Cowboy :4000)" as WEB
+
+rectangle "Usuarios" as USU
+rectangle "Registry\nBroadcast" as BRE
+rectangle "SupervisorVuelos\n(DynamicSupervisor)" as DSV
+
+rectangle "ServidorVuelo\n(uno por vuelo)" as SV
+
+SUP --> PER
+SUP --> REG
+SUP --> SUS
+SUP --> DOM
+SUP --> CON
+SUP --> TAR
+SUP --> WEB
+
+DOM --> USU
+DOM --> BRE
+DOM --> DSV
+
+DSV --> SV
+
+@enduml
