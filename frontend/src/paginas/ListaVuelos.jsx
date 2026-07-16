@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { pedir } from './../ws'
 import { ciudad, coincideDestino } from './../aeropuertos'
 
-// TAL-10: listado de vuelos con filtros (fecha, destino, aerolínea) y orden por precio.
+// TAL-10: listado de vuelos con filtros (fecha, origen, destino, aerolínea) y orden por precio.
 // Sin orden elegido, los vuelos van del más próximo al más lejano en fecha.
 export default function ListaVuelos() {
   const [vuelos, setVuelos] = useState(null)
@@ -10,6 +10,7 @@ export default function ListaVuelos() {
   const [error, setError] = useState(null)
 
   const [fecha, setFecha] = useState('')
+  const [origen, setOrigen] = useState('') // texto libre: ciudad o código
   const [destino, setDestino] = useState('') // texto libre: ciudad o código
   const [aerolinea, setAerolinea] = useState('')
   const [orden, setOrden] = useState('') // '', 'asc' o 'desc'
@@ -39,6 +40,11 @@ export default function ListaVuelos() {
     // la disponibilidad se refresca al volver a entrar a esta vista.
   }, [])
 
+  const origenes = useMemo(() => {
+    if (!vuelos) return []
+    return [...new Set(vuelos.map((v) => v.origen))].sort()
+  }, [vuelos])
+
   const destinos = useMemo(() => {
     if (!vuelos) return []
     return [...new Set(vuelos.map((v) => v.destino))].sort()
@@ -50,6 +56,7 @@ export default function ListaVuelos() {
       (v) =>
         (!fecha || v.fecha === fecha) &&
         (!aerolinea || v.aerolinea_id === aerolinea) &&
+        coincideDestino(v.origen, origen) &&
         coincideDestino(v.destino, destino)
     )
     if (orden === 'asc') {
@@ -62,12 +69,16 @@ export default function ListaVuelos() {
     return [...resultado].sort((a, b) =>
       `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`)
     )
-  }, [vuelos, fecha, destino, aerolinea, orden])
+  }, [vuelos, fecha, origen, destino, aerolinea, orden])
 
   if (error) return <p className="error">{error}</p>
   if (!vuelos) return <p className="cargando">Cargando vuelos…</p>
 
-  const hayFiltros = fecha || destino || aerolinea || orden
+  const hayFiltros = fecha || origen || destino || aerolinea || orden
+
+  // Hoy en formato YYYY-MM-DD con hora local (toISOString usaría UTC y
+  // de noche ya marcaría "mañana").
+  const hoy = new Date().toLocaleDateString('en-CA')
 
   return (
     <section>
@@ -78,9 +89,27 @@ export default function ListaVuelos() {
           Fecha
           <input
             type="date"
+            min={hoy}
             value={fecha}
             onChange={(e) => setFecha(e.target.value)}
           />
+        </label>
+        <label>
+          Origen
+          <input
+            type="text"
+            list="lista-origenes"
+            placeholder="Ciudad o código"
+            value={origen}
+            onChange={(e) => setOrigen(e.target.value)}
+          />
+          <datalist id="lista-origenes">
+            {origenes.map((o) => (
+              <option key={o} value={ciudad(o)}>
+                {o}
+              </option>
+            ))}
+          </datalist>
         </label>
         <label>
           Destino
@@ -126,6 +155,7 @@ export default function ListaVuelos() {
             className="limpiar"
             onClick={() => {
               setFecha('')
+              setOrigen('')
               setDestino('')
               setAerolinea('')
               setOrden('')
