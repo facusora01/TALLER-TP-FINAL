@@ -127,6 +127,7 @@ export default function MisReservas({ usuario }) {
   }
 
   const confirmar = (reserva) => {
+    // eslint-disable-next-line react-hooks/immutability
     window.location.hash = `#/pago/${reserva.vuelo_id}/${reserva.reserva_id}`
   }
   const cancelar = (reserva) =>

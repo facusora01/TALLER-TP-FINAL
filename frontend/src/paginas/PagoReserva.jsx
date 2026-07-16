@@ -76,7 +76,9 @@ export default function PagoReserva({ vueloId, reservaId, usuario }) {
         vuelo_id: vueloId,
         reserva_id: reservaId,
       })
-    } catch {}
+    } catch {
+      // la cancelación es best-effort; si falla, la reserva expira sola
+    }
   }
 
   const minutos = String(Math.floor(segundos / 60)).padStart(2, '0')
