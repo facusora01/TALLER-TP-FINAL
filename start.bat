@@ -20,3 +20,8 @@ cd /d "%~dp0"
 
 echo Levantando backend y frontend...
 docker compose up --build
+if errorlevel 1 (
+    echo.
+    echo [AVISO] El build fallo, sin internet? Intentando con las imagenes ya buildeadas...
+    docker compose up
+)

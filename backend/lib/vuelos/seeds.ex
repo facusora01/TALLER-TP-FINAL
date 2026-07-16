@@ -4,6 +4,8 @@ defmodule Vuelos.Seeds do
   alias Vuelos.Persistencia
   alias Vuelos.Vuelo
 
+  # PRE: la tabla :vuelos esta abierta.
+  # POST: inserta aerolineas y vuelos solo si la tabla estaba vacia.
   def cargar do
     if Persistencia.todos(:vuelos) == [] do
       insertar_aerolineas()
@@ -13,12 +15,16 @@ defmodule Vuelos.Seeds do
 
   # --- Aerolíneas ---
 
+  # PRE: la tabla :vuelos esta abierta.
+  # POST: persiste las 5 aerolineas de ejemplo.
   defp insertar_aerolineas do
     Enum.each(aerolineas(), fn a ->
       Persistencia.guardar(:vuelos, {:aerolinea, a.id}, a)
     end)
   end
 
+  # PRE: no recibe nada.
+  # POST: devuelve la lista fija de aerolineas de ejemplo.
   defp aerolineas do
     [
       %{id: "ARC", nombre: "Aerolíneas del Cóndor", codigo: "ARC", color: "#2196F3"},
@@ -31,10 +37,12 @@ defmodule Vuelos.Seeds do
 
   # --- Vuelos ---
 
-  # Narrow-body para cabotaje corto; wide-body (dos pasillos) para rutas largas.
+  # Tipo de avion (distribucion de asientos)
   @avion_narrow %{modelo: "Boeing 737-800", distribucion: [3, 3]}
   @avion_wide %{modelo: "Airbus A340-300", distribucion: [2, 4, 2]}
 
+  # PRE: la tabla :vuelos esta abierta.
+  # POST: persiste todos los vuelos de ejemplo, con fechas corridas al futuro y asientos libres.
   defp insertar_vuelos do
     lista = vuelos()
     corrimiento = corrimiento_fechas(lista)
@@ -58,11 +66,15 @@ defmodule Vuelos.Seeds do
 
   # Días a sumar a todas las fechas para que el primer vuelo caiga unos días
   # después de hoy, conservando el espaciado relativo original entre vuelos.
+  # PRE: recibe la lista de vuelos (no vacia, cada uno con fecha).
+  # POST: devuelve los dias a sumar para que el primer vuelo caiga 3 dias despues de hoy.
   defp corrimiento_fechas(lista) do
     fecha_min = lista |> Enum.map(& &1.fecha) |> Enum.min(Date)
     Date.diff(Date.utc_today(), fecha_min) + 3
   end
 
+  # PRE: no recibe nada.
+  # POST: devuelve la lista fija de vuelos de ejemplo (50 vuelos, 5 aerolineas).
   defp vuelos do
     [
       # ARC – Aerolíneas del Cóndor
@@ -127,6 +139,8 @@ defmodule Vuelos.Seeds do
     ]
   end
 
+  # PRE: recibe cantidad (> 0) y distribucion (lista de enteros positivos).
+  # POST: devuelve la lista de asientos :libre numerados, con clase segun la fila.
   defp crear_asientos(cantidad, distribucion) do
     por_fila = Enum.sum(distribucion)
 
@@ -142,6 +156,8 @@ defmodule Vuelos.Seeds do
   end
 
   # Primeras filas First, luego Business, el resto Economy.
+  # PRE: recibe el numero de fila (>= 1).
+  # POST: devuelve :first, :business o :economy segun la fila.
   defp clase_para_fila(fila) when fila <= 2, do: :first
   defp clase_para_fila(fila) when fila <= 5, do: :business
   defp clase_para_fila(_fila), do: :economy

@@ -7,6 +7,8 @@ defmodule Vuelos.Protocolo do
   alias Vuelos.{Usuarios, GestorVuelos}
 
   @doc "Atiende un mensaje de texto del cliente y devuelve la respuesta ya codificada en JSON."
+  # PRE: recibe el texto que llego por el WebSocket y el pid de la conexion.
+  # POST: decodifica, despacha segun type y devuelve la respuesta ya codificada en JSON (o un error si el mensaje no era valido).
   def atender(texto, pid \\ self()) do
     case Jason.decode(texto) do
       {:ok, %{"type" => tipo} = mensaje} ->
@@ -17,18 +19,24 @@ defmodule Vuelos.Protocolo do
     end
   end
 
+  # PRE: el payload trae nombre (string).
+  # POST: crea el usuario y responde "registrar_usuario_ok" con id y nombre.
   defp despachar("registrar_usuario", request_id, %{"nombre" => nombre}, _pid)
        when is_binary(nombre) do
     {:ok, usuario} = Usuarios.registrar(nombre)
     respuesta("registrar_usuario_ok", request_id, %{usuario_id: usuario.id, nombre: usuario.nombre})
   end
 
+  # PRE: el payload trae nombre (string).
+  # POST: responde "iniciar_sesion_ok" con el usuario existente o recien creado.
   defp despachar("iniciar_sesion", request_id, %{"nombre" => nombre}, _pid)
        when is_binary(nombre) do
     {:ok, usuario} = Usuarios.iniciar_sesion(nombre)
     respuesta("iniciar_sesion_ok", request_id, %{usuario_id: usuario.id, nombre: usuario.nombre})
   end
 
+  # PRE: el payload trae usuario_id.
+  # POST: responde "obtener_usuario_ok" con el usuario, o error USUARIO_NO_EXISTE.
   defp despachar("obtener_usuario", request_id, %{"usuario_id" => id}, _pid) do
     case Usuarios.obtener(id) do
       {:ok, usuario} ->
@@ -39,6 +47,8 @@ defmodule Vuelos.Protocolo do
     end
   end
 
+  # PRE: no necesita payload.
+  # POST: responde "listar_vuelos_ok" con el resumen de todos los vuelos.
   defp despachar("listar_vuelos", request_id, _payload, _pid) do
     vuelos =
       GestorVuelos.listar_vuelos()
@@ -51,6 +61,8 @@ defmodule Vuelos.Protocolo do
     )
   end
 
+  # PRE: no necesita payload.
+  # POST: responde "listar_aerolineas_ok" con la lista de aerolineas.
   defp despachar("listar_aerolineas", request_id, _payload, _pid) do
     respuesta(
       "listar_aerolineas_ok",
@@ -59,6 +71,8 @@ defmodule Vuelos.Protocolo do
     )
   end
 
+  # PRE: el payload trae usuario_id.
+  # POST: responde "mis_reservas_ok" con las reservas del usuario, o error USUARIO_NO_EXISTE.
   defp despachar("mis_reservas", request_id, %{"usuario_id" => usuario_id}, _pid) do
     case Usuarios.obtener(usuario_id) do
       :error ->
@@ -77,6 +91,8 @@ defmodule Vuelos.Protocolo do
     end
   end
 
+  # PRE: el payload trae vuelo_id.
+  # POST: responde "buscar_vuelo_ok" con el resumen del vuelo, o error VUELO_NO_EXISTE.
   defp despachar("buscar_vuelo", request_id, %{"vuelo_id" => id}, _pid) do
     case GestorVuelos.buscar_vuelo(id) do
       nil ->
@@ -95,6 +111,8 @@ defmodule Vuelos.Protocolo do
     end
   end
 
+  # PRE: el payload trae vuelo_id.
+  # POST: responde "obtener_asientos_ok" con los asientos del vuelo, o error VUELO_NO_EXISTE.
   defp despachar("obtener_asientos", request_id, %{"vuelo_id" => id}, _pid) do
     case GestorVuelos.obtener_asientos(id) do
       {:ok, asientos} ->
@@ -113,6 +131,8 @@ defmodule Vuelos.Protocolo do
     end
   end
 
+  # PRE: el payload trae vuelo_id, numero_asiento y usuario_id.
+  # POST: crea la reserva y responde "reservar_asiento_ok" con su id, o el error correspondiente.
   defp despachar("reservar_asiento", request_id, %{"vuelo_id" => vuelo_id, "numero_asiento" => numero_asiento, "usuario_id" => usuario_id}, _pid) do
     case Usuarios.obtener(usuario_id) do
       :error ->
@@ -161,6 +181,8 @@ defmodule Vuelos.Protocolo do
     end
   end
 
+  # PRE: el payload trae vuelo_id y reserva_id.
+  # POST: inicia el pago y responde "confirmar_reserva_ok", o el error correspondiente.
   defp despachar("confirmar_reserva", request_id, %{ "vuelo_id" => vuelo_id, "reserva_id" => reserva_id}, _pid) do
     case GestorVuelos.confirmar_reserva(vuelo_id, reserva_id) do
       :ok ->
@@ -193,6 +215,8 @@ defmodule Vuelos.Protocolo do
     end
   end
 
+  # PRE: el payload trae vuelo_id y reserva_id.
+  # POST: cancela la reserva y responde "cancelar_reserva_ok", o el error correspondiente.
   defp despachar("cancelar_reserva", request_id, %{ "vuelo_id" => vuelo_id, "reserva_id" => reserva_id}, _pid) do
     case GestorVuelos.cancelar_reserva(vuelo_id, reserva_id) do
       :ok ->
@@ -225,6 +249,8 @@ defmodule Vuelos.Protocolo do
     end
   end
 
+  # PRE: el payload trae vuelo_id y reserva_id.
+  # POST: expira la reserva y responde "expirar_reserva_ok", o el error correspondiente.
   defp despachar("expirar_reserva", request_id, %{"vuelo_id" => vuelo_id, "reserva_id" => reserva_id}, _pid) do
     case GestorVuelos.expirar_reserva(vuelo_id, reserva_id) do
       :ok ->
@@ -257,6 +283,8 @@ defmodule Vuelos.Protocolo do
     end
   end
 
+  # PRE: el payload trae vuelo_id; pid es la conexion WebSocket del cliente.
+  # POST: suscribe la conexion a los push de ese vuelo y responde "suscribir_vuelo_ok".
   defp despachar("suscribir_vuelo", request_id, %{"vuelo_id" => vuelo_id}, pid) do
     Vuelos.Broadcast.subscribir(vuelo_id, pid)
 
@@ -267,14 +295,20 @@ defmodule Vuelos.Protocolo do
     )
   end
 
+  # PRE: ninguna clausula anterior matcheo (tipo desconocido o payload incompleto).
+  # POST: responde error TIPO_DESCONOCIDO.
   defp despachar(tipo, request_id, _payload, _pid) when is_binary(tipo) do
     error(request_id, "TIPO_DESCONOCIDO", "El servidor no reconoce el tipo de mensaje.")
   end
 
+  # PRE: el campo type ni siquiera es un string.
+  # POST: responde error MENSAJE_INVALIDO.
   defp despachar(_tipo, request_id, _payload, _pid) do
     error(request_id, "MENSAJE_INVALIDO", "El mensaje no respeta el formato del protocolo.")
   end
 
+  # PRE: recibe un Vuelo con asientos.
+  # POST: devuelve un mapa con los campos publicos del vuelo (sin reservas ni timers).
   defp resumen_vuelo(vuelo) do
     %{
       id: vuelo.id,
@@ -292,10 +326,14 @@ defmodule Vuelos.Protocolo do
     }
   end
 
+  # PRE: recibe tipo, request_id y un payload codificable a JSON.
+  # POST: devuelve el JSON con {type, request_id, payload}.
   defp respuesta(tipo, request_id, payload) do
     Jason.encode!(%{type: tipo, request_id: request_id, payload: payload})
   end
 
+  # PRE: recibe request_id, codigo y mensaje.
+  # POST: devuelve el JSON de tipo "error" con codigo y mensaje.
   defp error(request_id, codigo, mensaje) do
     respuesta("error", request_id, %{codigo: codigo, mensaje: mensaje})
   end

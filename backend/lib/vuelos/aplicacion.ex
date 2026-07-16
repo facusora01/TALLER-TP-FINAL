@@ -1,6 +1,8 @@
 defmodule Vuelos.Aplicacion do
   use Application
 
+  # PRE: la aplicacion no esta iniciada.
+  # POST: levanta el arbol de supervision, carga los seeds y devuelve {:ok, pid}.
   @impl true
   def start(_tipo, _args) do
     hijos = [

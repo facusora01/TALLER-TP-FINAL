@@ -6,10 +6,14 @@ defmodule Vuelos.Broadcast do
 
   @registry Vuelos.BroadcastRegistry
 
+  # PRE: recibe el id del vuelo y el pid de la conexion; el BroadcastRegistry esta corriendo.
+  # POST: registra el pid como suscriptor del vuelo; recibira los push de ese vuelo.
   def subscribir(vuelo_id, pid \\ self()) do
     Registry.register(@registry, vuelo_id, pid)
   end
 
+  # PRE: recibe el vuelo (con id y asientos).
+  # POST: manda "vuelo_actualizado" con los asientos a todos los suscriptos al vuelo.
   def notificar(vuelo) do
     Registry.dispatch(@registry, vuelo.id, fn entradas ->
       mensaje =
@@ -27,6 +31,8 @@ defmodule Vuelos.Broadcast do
     end)
   end
 
+  # PRE: recibe el vuelo y una reserva que le pertenece.
+  # POST: manda "reserva_actualizada" con el nuevo estado a todos los suscriptos al vuelo.
   def notificar_reserva(vuelo, reserva) do
     Registry.dispatch(@registry, vuelo.id, fn entradas ->
       mensaje =
